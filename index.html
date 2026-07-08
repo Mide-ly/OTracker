@@ -85,7 +85,6 @@
                 
                 <!-- METRICS SECTION -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <!-- Total Vehicles -->
                     <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
                         <div>
                             <p class="text-stone-400 text-xs font-bold uppercase tracking-widest mb-1">Total Vehicles</p>
@@ -96,7 +95,6 @@
                         </div>
                     </div>
                     
-                    <!-- Active Documents -->
                     <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
                         <div>
                             <p class="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-1">Active Documents</p>
@@ -107,7 +105,6 @@
                         </div>
                     </div>
 
-                    <!-- Action Needed -->
                     <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
                         <div>
                             <p class="text-rose-500 text-xs font-bold uppercase tracking-widest mb-1">Action Needed</p>
@@ -127,11 +124,18 @@
                                 <h2 class="text-2xl font-bold mb-1">{{ car.name }}</h2>
                                 <span class="inline-block px-3 py-1 bg-white/10 rounded-lg text-xs font-mono font-bold tracking-widest uppercase border border-white/10">{{ car.plate_number }}</span>
                             </div>
-                            <button @click="deleteCar(car.id)" class="text-stone-400 hover:text-rose-400 p-1.5 rounded-lg transition duration-200" title="Delete Vehicle">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                </svg>
-                            </button>
+                            <div class="flex gap-1">
+                                <button @click="openEditCar(car)" class="text-stone-400 hover:text-white p-1.5 rounded-lg transition duration-200" title="Edit Vehicle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                    </svg>
+                                </button>
+                                <button @click="deleteCar(car.id)" class="text-stone-400 hover:text-rose-400 p-1.5 rounded-lg transition duration-200" title="Delete Vehicle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="p-6 flex-1">
                             <table class="w-full text-left">
@@ -139,23 +143,29 @@
                                     <tr>
                                         <th class="pb-3">Type</th>
                                         <th class="pb-3 text-right">Expires</th>
-                                        <th class="pb-3 w-8"></th>
+                                        <th class="pb-3 w-16"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 last:border-0 group">
                                         <td class="py-4 font-semibold text-stone-800">{{ doc.type }}</td>
-                                        <!-- Dynamic Class for Expiry Flashing -->
                                         <td class="py-4 text-right font-mono transition-colors" 
                                             :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 font-bold animate-pulse' : 'text-stone-500'">
                                             {{ doc.expiry_date }}
                                         </td>
                                         <td class="py-4 text-right pl-2">
-                                            <button @click="deleteDoc(doc.id)" class="text-stone-300 hover:text-rose-500 transition duration-150 p-1 rounded" title="Delete Document">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
+                                            <div class="flex justify-end gap-1">
+                                                <button @click="openEditDoc(doc)" class="text-stone-300 hover:text-stone-600 transition duration-150 p-1 rounded" title="Edit Document">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                                                    </svg>
+                                                </button>
+                                                <button @click="deleteDoc(doc.id)" class="text-stone-300 hover:text-rose-500 transition duration-150 p-1 rounded" title="Delete Document">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr v-if="getCarDocuments(car.id).length === 0">
@@ -169,7 +179,7 @@
             </div>
         </div>
 
-        <!-- MODALS -->
+        <!-- ADD MODALS -->
         <div v-if="showCarModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
                 <h3 class="text-2xl font-bold mb-6">Add Vehicle</h3>
@@ -192,10 +202,31 @@
                 <button @click="showDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
             </div>
         </div>
+
+        <!-- EDIT MODALS -->
+        <div v-if="showEditCarModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
+                <h3 class="text-2xl font-bold mb-6">Edit Vehicle</h3>
+                <input v-model="editCarData.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
+                <input v-model="editCarData.plate" placeholder="Plate Number" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
+                <button @click="updateCar" class="w-full bg-stone-900 text-white p-4 rounded-2xl font-bold hover:bg-stone-800">Update Vehicle</button>
+                <button @click="showEditCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
+            </div>
+        </div>
+
+        <div v-if="showEditDocModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
+                <h3 class="text-2xl font-bold mb-6">Edit Document</h3>
+                <input v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100" />
+                <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100" />
+                <button @click="updateDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600">Update Document</button>
+                <button @click="showEditDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script>
-       const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
+        const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -214,38 +245,33 @@
                 const currentUser = ref({});
                 const cars = ref([]);
                 const documents = ref([]);
+                
+                // Modal refs
                 const showCarModal = ref(false);
                 const showDocModal = ref(false);
+                const showEditCarModal = ref(false);
+                const showEditDocModal = ref(false);
+                
+                // Form data refs
                 const newCar = ref({ name: '', plate: '' });
                 const newDoc = ref({ carId: '', type: '', expiry: '' });
+                const editCarData = ref({ id: '', name: '', plate: '' });
+                const editDocData = ref({ id: '', type: '', expiry: '' });
+                
                 const isLoadingData = ref(false);
 
-                // --- HELPER FUNCTION: Check if date is within 30 days or passed ---
                 const isExpiringSoon = (expiryDateStr) => {
                     const today = new Date();
-                    today.setHours(0, 0, 0, 0); // Normalize today
+                    today.setHours(0, 0, 0, 0);
                     const expiryDate = new Date(expiryDateStr);
-                    
-                    // Difference in time
                     const diffTime = expiryDate - today;
-                    // Difference in days
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    return diffDays <= 30; // True if expiring in 30 days or already expired
+                    return diffDays <= 30;
                 };
 
-                // --- COMPUTED PROPERTIES FOR METRICS ---
                 const totalVehicles = computed(() => cars.value.length);
-                
-                // Documents that are safe (> 30 days until expiry)
-                const activeDocuments = computed(() => {
-                    return documents.value.filter(doc => !isExpiringSoon(doc.expiry_date)).length;
-                });
-                
-                // Documents expiring in <= 30 days or already expired
-                const actionNeeded = computed(() => {
-                    return documents.value.filter(doc => isExpiringSoon(doc.expiry_date)).length;
-                });
+                const activeDocuments = computed(() => documents.value.filter(doc => !isExpiringSoon(doc.expiry_date)).length);
+                const actionNeeded = computed(() => documents.value.filter(doc => isExpiringSoon(doc.expiry_date)).length);
 
                 const toggleAuthMode = () => { isLoginMode.value = !isLoginMode.value; authError.value = ''; };
 
@@ -278,6 +304,7 @@
                     isLoadingData.value = false;
                 };
 
+                // Add Functions
                 const submitCar = async () => {
                     await supabaseClient.from('cars').insert([{ owner_id: currentUser.value.id, name: newCar.value.name, plate_number: newCar.value.plate }]);
                     newCar.value = { name: '', plate: '' };
@@ -292,18 +319,39 @@
                     fetchFleet();
                 };
 
+                // Edit Functions
+                const openEditCar = (car) => {
+                    editCarData.value = { id: car.id, name: car.name, plate: car.plate_number };
+                    showEditCarModal.value = true;
+                };
+
+                const openEditDoc = (doc) => {
+                    editDocData.value = { id: doc.id, type: doc.type, expiry: doc.expiry_date };
+                    showEditDocModal.value = true;
+                };
+
+                const updateCar = async () => {
+                    await supabaseClient.from('cars').update({ name: editCarData.value.name, plate_number: editCarData.value.plate }).eq('id', editCarData.value.id);
+                    showEditCarModal.value = false;
+                    fetchFleet();
+                };
+
+                const updateDoc = async () => {
+                    await supabaseClient.from('documents').update({ type: editDocData.value.type, expiry_date: editDocData.value.expiry }).eq('id', editDocData.value.id);
+                    showEditDocModal.value = false;
+                    fetchFleet();
+                };
+
+                // Delete Functions
                 const deleteCar = async (carId) => {
                     if (!confirm("Are you sure you want to remove this vehicle? This will delete all its registered documents as well.")) return;
-                    
                     await supabaseClient.from('documents').delete().eq('car_id', carId);
                     await supabaseClient.from('cars').delete().eq('id', carId);
-                    
                     fetchFleet();
                 };
 
                 const deleteDoc = async (docId) => {
                     if (!confirm("Are you sure you want to remove this document?")) return;
-                    
                     await supabaseClient.from('documents').delete().eq('id', docId);
                     fetchFleet();
                 };
@@ -314,8 +362,10 @@
                 return { 
                     isLoggedIn, isLoginMode, isLoading, handleAuth, logout, 
                     cars, documents, getCarDocuments, 
-                    showCarModal, showDocModal, submitCar, submitDoc, deleteCar, deleteDoc, 
-                    newCar, newDoc, authPassword, authName, authError, selectedCountryCode, localPhoneNumber, currentUser, toggleAuthMode, isLoadingData,
+                    showCarModal, showDocModal, showEditCarModal, showEditDocModal,
+                    submitCar, submitDoc, updateCar, updateDoc, deleteCar, deleteDoc, openEditCar, openEditDoc,
+                    newCar, newDoc, editCarData, editDocData, 
+                    authPassword, authName, authError, selectedCountryCode, localPhoneNumber, currentUser, toggleAuthMode, isLoadingData,
                     totalVehicles, activeDocuments, actionNeeded, isExpiringSoon
                 };
             }
