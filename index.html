@@ -145,8 +145,9 @@
                                 <tbody>
                                     <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 last:border-0 group">
                                         <td class="py-4 font-semibold text-stone-800">{{ doc.type }}</td>
-                                        <td class="py-4 text-right font-mono text-stone-500">
-                                            <!-- Optionally you could add dynamic color here if it's expired -->
+                                        <!-- Dynamic Class for Expiry Flashing -->
+                                        <td class="py-4 text-right font-mono transition-colors" 
+                                            :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 font-bold animate-pulse' : 'text-stone-500'">
                                             {{ doc.expiry_date }}
                                         </td>
                                         <td class="py-4 text-right pl-2">
@@ -168,6 +169,7 @@
             </div>
         </div>
 
+        <!-- MODALS -->
         <div v-if="showCarModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
                 <h3 class="text-2xl font-bold mb-6">Add Vehicle</h3>
@@ -193,8 +195,8 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
+        const SUPABASE_URL = 'YOUR_URL.supabase.co';
+        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const { createApp, ref, computed } = Vue;
@@ -218,18 +220,31 @@
                 const newDoc = ref({ carId: '', type: '', expiry: '' });
                 const isLoadingData = ref(false);
 
+                // --- HELPER FUNCTION: Check if date is within 30 days or passed ---
+                const isExpiringSoon = (expiryDateStr) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Normalize today
+                    const expiryDate = new Date(expiryDateStr);
+                    
+                    // Difference in time
+                    const diffTime = expiryDate - today;
+                    // Difference in days
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    return diffDays <= 30; // True if expiring in 30 days or already expired
+                };
+
                 // --- COMPUTED PROPERTIES FOR METRICS ---
                 const totalVehicles = computed(() => cars.value.length);
                 
+                // Documents that are safe (> 30 days until expiry)
                 const activeDocuments = computed(() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    return documents.value.filter(doc => doc.expiry_date >= today).length;
+                    return documents.value.filter(doc => !isExpiringSoon(doc.expiry_date)).length;
                 });
                 
+                // Documents expiring in <= 30 days or already expired
                 const actionNeeded = computed(() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    // Any document whose expiry date is strictly before today needs action (is expired)
-                    return documents.value.filter(doc => doc.expiry_date < today).length;
+                    return documents.value.filter(doc => isExpiringSoon(doc.expiry_date)).length;
                 });
 
                 const toggleAuthMode = () => { isLoginMode.value = !isLoginMode.value; authError.value = ''; };
@@ -301,7 +316,7 @@
                     cars, documents, getCarDocuments, 
                     showCarModal, showDocModal, submitCar, submitDoc, deleteCar, deleteDoc, 
                     newCar, newDoc, authPassword, authName, authError, selectedCountryCode, localPhoneNumber, currentUser, toggleAuthMode, isLoadingData,
-                    totalVehicles, activeDocuments, actionNeeded 
+                    totalVehicles, activeDocuments, actionNeeded, isExpiringSoon
                 };
             }
         }).mount('#app');
