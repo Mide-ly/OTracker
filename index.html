@@ -4,25 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OTracker | Fleet Management</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .bg-pattern { background-color: #fafaf9; background-image: radial-gradient(#e7e5e4 1px, transparent 1px); background-size: 24px 24px; }
-        @keyframes flash-red { 0%, 100% { background-color: #fef2f2; } 50% { background-color: #fee2e2; } }
-        .flash-red { animation: flash-red 2s infinite; }
+        .flash-red { animation: pulse-red 2s infinite; }
+        @keyframes pulse-red { 0%, 100% { background-color: transparent; } 50% { background-color: #fef2f2; } }
     </style>
 </head>
 <body class="bg-pattern min-h-screen text-stone-900">
 
-    <div id="app" class="w-full min-h-screen">
+    <div id="app" class="w-full min-h-screen p-4 sm:p-8">
+        
         <!-- AUTHENTICATION -->
-        <div v-if="!isLoggedIn" class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-stone-200 max-w-sm w-full">
+        <div v-if="!isLoggedIn" class="flex items-center justify-center min-h-[80vh]">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-stone-100 max-w-sm w-full">
                 <h1 class="text-3xl font-extrabold text-center mb-8">OTracker</h1>
                 <div class="space-y-4">
                     <div v-if="!isLoginMode">
@@ -30,12 +29,17 @@
                         <input type="text" v-model="authName" class="w-full px-4 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Phone</label>
+                        <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Phone Number</label>
                         <div class="flex">
-                            <select v-model="selectedCountryCode" class="px-2 py-3 border border-stone-200 border-r-0 rounded-l-xl bg-stone-50">
-                                <option value="+234">+234</option><option value="+233">+233</option><option value="+27">+27</option>
+                            <select v-model="selectedCountryCode" class="px-2 py-3 border border-stone-200 border-r-0 rounded-l-xl bg-stone-50 text-sm">
+                                <option value="+234">🇳🇬 Nigeria (+234)</option>
+                                <option value="+233">🇬🇭 Ghana (+233)</option>
+                                <option value="+27">🇿🇦 South Africa (+27)</option>
+                                <option value="+254">🇰🇪 Kenya (+254)</option>
+                                <option value="+44">🇬🇧 UK (+44)</option>
+                                <option value="+1">🇺🇸 USA (+1)</option>
                             </select>
-                            <input type="tel" v-model="localPhoneNumber" placeholder="801 234 5678" class="flex-1 px-4 py-3 border border-stone-200 rounded-r-xl focus:ring-2 focus:ring-stone-900 outline-none">
+                            <input type="tel" v-model="localPhoneNumber" placeholder="8012345678" class="flex-1 px-4 py-3 border border-stone-200 rounded-r-xl focus:ring-2 focus:ring-stone-900 outline-none">
                         </div>
                     </div>
                     <div>
@@ -44,83 +48,92 @@
                     </div>
                 </div>
                 <button @click="handleAuth" class="w-full mt-6 bg-stone-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">{{ isLoginMode ? 'Login' : 'Register' }}</button>
-                <p @click="toggleAuthMode" class="text-center mt-4 text-sm underline cursor-pointer">{{ isLoginMode ? 'Need account?' : 'Already have one?' }}</p>
-                <div v-if="authError" class="mt-4 p-3 bg-red-50 text-red-600 text-sm text-center rounded-lg">{{ authError }}</div>
+                <p @click="isLoginMode = !isLoginMode" class="text-center mt-4 text-sm text-stone-500 underline cursor-pointer hover:text-stone-900">{{ isLoginMode ? 'Create new account' : 'Already have account?' }}</p>
             </div>
         </div>
 
         <!-- DASHBOARD -->
-        <div v-else class="p-4 sm:p-8">
+        <div v-else>
             <header class="flex justify-between items-center mb-10">
                 <div>
                     <h1 class="text-4xl font-extrabold">OTracker</h1>
-                    <p class="text-stone-500">Welcome, {{ currentUser.name }}</p>
+                    <p class="text-stone-500">Welcome back, {{ currentUser.name }}</p>
                 </div>
-                <div class="flex gap-2">
-                    <button @click="showCarModal = true" class="bg-stone-900 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg">+ Vehicle</button>
-                    <button @click="logout" class="text-stone-500 font-bold hover:text-black">Logout</button>
-                </div>
+                <button @click="logout" class="text-stone-400 font-bold hover:text-stone-900 mr-4">Logout</button>
+                <button @click="showCarModal = true" class="bg-stone-900 text-white px-5 py-2.5 rounded-xl font-bold">+ Vehicle</button>
             </header>
 
-            <!-- ACTION SUMMARY CARDS -->
+            <!-- STATS -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                    <p class="text-stone-500 text-sm font-bold uppercase">Total Vehicles</p>
-                    <h2 class="text-4xl font-extrabold">{{ cars.length }}</h2>
+                <div class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                    <p class="text-stone-400 text-xs font-bold uppercase">Total Vehicles</p>
+                    <p class="text-4xl font-extrabold">{{ cars.length }}</p>
                 </div>
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                    <p class="text-stone-500 text-sm font-bold uppercase">Active Documents</p>
-                    <h2 class="text-4xl font-extrabold">{{ documents.length }}</h2>
+                <div class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                    <p class="text-stone-400 text-xs font-bold uppercase">Active Documents</p>
+                    <p class="text-4xl font-extrabold">{{ documents.length }}</p>
                 </div>
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
-                    <p class="text-red-500 text-sm font-bold uppercase">Action Required</p>
-                    <h2 class="text-4xl font-extrabold text-red-600">{{ actionNeededCount }}</h2>
+                <div class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+                    <p class="text-stone-400 text-xs font-bold uppercase">Action Required</p>
+                    <p class="text-4xl font-extrabold text-red-600">{{ actionRequiredCount }}</p>
                 </div>
             </div>
 
             <!-- CARS GRID -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="car in cars" :key="car.id" class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+                <div v-for="car in cars" :key="car.id" class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <h3 class="text-xl font-bold">{{ car.name }}</h3>
-                            <p class="text-sm text-stone-500 font-mono">{{ car.plate_number }}</p>
+                            <p class="text-stone-500 font-mono">{{ car.plate_number }}</p>
                         </div>
-                        <button @click="deleteCar(car.id)" class="text-red-400 hover:text-red-600 font-bold text-xs transition">Delete</button>
+                        <button @click="deleteCar(car.id)" class="text-red-400 hover:text-red-600 font-bold text-xs">Delete</button>
                     </div>
                     
+                    <button @click="openDocModal(car.id)" class="w-full py-2 mb-4 bg-stone-100 rounded-xl font-bold text-sm hover:bg-stone-200">+ Add Doc</button>
+
                     <div class="space-y-2">
                         <div v-for="doc in getCarDocuments(car.id)" :key="doc.id" 
-                             :class="isExpiringSoonOrExpired(doc.expiry_date) ? 'flash-red border-red-200' : 'border-stone-100'"
-                             class="flex justify-between items-center p-3 rounded-xl border bg-stone-50 transition">
+                             :class="['p-3 rounded-xl border flex justify-between items-center', isExpiring(doc.expiry_date) ? 'flash-red border-red-200' : 'bg-stone-50 border-stone-100']">
                             <div>
                                 <p class="text-sm font-bold">{{ doc.type }}</p>
                                 <p class="text-xs text-stone-500">{{ doc.expiry_date }}</p>
                             </div>
-                            <button @click="deleteDocument(doc.id)" class="text-red-400 hover:text-red-600 font-bold text-xs">×</button>
+                            <button @click="deleteDoc(doc.id)" class="text-red-400 text-xs">×</button>
                         </div>
                     </div>
-                    <button @click="openDocModal(car.id)" class="w-full mt-4 text-amber-600 font-bold text-sm bg-amber-50 py-2 rounded-lg transition hover:bg-amber-100">+ Add Document</button>
                 </div>
             </div>
-        </div>
-        
-        <!-- Add Document Modal -->
-        <div v-if="showDocModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div class="bg-white p-6 rounded-2xl w-full max-w-sm">
-                <h2 class="text-xl font-bold mb-4">Add Document</h2>
-                <input v-model="newDocType" placeholder="Type (e.g. Insurance)" class="w-full p-2 border rounded mb-2">
-                <input type="date" v-model="newDocExpiry" class="w-full p-2 border rounded mb-4">
-                <div class="flex gap-2">
-                    <button @click="submitDocument" class="flex-1 bg-stone-900 text-white py-2 rounded-lg font-bold">Save</button>
-                    <button @click="showDocModal = false" class="flex-1 border py-2 rounded-lg font-bold">Cancel</button>
+
+            <!-- MODALS -->
+            <div v-if="showCarModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                <div class="bg-white p-8 rounded-3xl w-full max-w-sm">
+                    <h3 class="text-xl font-bold mb-4">Add Vehicle</h3>
+                    <input type="text" v-model="newCar.name" placeholder="Name" class="w-full p-3 mb-2 border rounded-xl">
+                    <input type="text" v-model="newCar.plate" placeholder="Plate Number" class="w-full p-3 mb-4 border rounded-xl">
+                    <div class="flex gap-2">
+                        <button @click="showCarModal = false" class="flex-1 py-3 border rounded-xl font-bold">Cancel</button>
+                        <button @click="submitCar" class="flex-1 py-3 bg-stone-900 text-white rounded-xl font-bold">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="showDocModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                <div class="bg-white p-8 rounded-3xl w-full max-w-sm">
+                    <h3 class="text-xl font-bold mb-4">Add Document</h3>
+                    <input type="text" v-model="newDoc.type" placeholder="Type (e.g. Insurance)" class="w-full p-3 mb-2 border rounded-xl">
+                    <input type="date" v-model="newDoc.expiry" class="w-full p-3 mb-4 border rounded-xl">
+                    <div class="flex gap-2">
+                        <button @click="showDocModal = false" class="flex-1 py-3 border rounded-xl font-bold">Cancel</button>
+                        <button @click="submitDoc" class="flex-1 py-3 bg-stone-900 text-white rounded-xl font-bold">Save</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
+       const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
@@ -129,59 +142,60 @@
             setup() {
                 const isLoggedIn = ref(false);
                 const isLoginMode = ref(true);
-                const currentUser = ref({});
-                const cars = ref([]);
-                const documents = ref([]);
-                const showCarModal = ref(false);
-                const showDocModal = ref(false);
-                const selectedCarId = ref(null);
-                const newDocType = ref('');
-                const newDocExpiry = ref('');
+                const authName = ref('');
+                const authPassword = ref('');
                 const selectedCountryCode = ref('+234');
                 const localPhoneNumber = ref('');
-                const authPassword = ref('');
-                const authName = ref('');
-                const authError = ref('');
-
-                const isExpiringSoonOrExpired = (dateStr) => {
-                    const today = new Date();
-                    const expiry = new Date(dateStr);
-                    const diffTime = expiry - today;
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    return diffDays <= 30;
-                };
-
-                const actionNeededCount = computed(() => documents.value.filter(doc => isExpiringSoonOrExpired(doc.expiry_date)).length);
-
-                const fetchDashboardData = async () => {
-                    const { data: c } = await supabaseClient.from('cars').select('*').eq('owner_id', currentUser.value.id);
-                    cars.value = c || [];
-                    if(cars.value.length > 0) {
-                        const { data: d } = await supabaseClient.from('documents').select('*').in('car_id', cars.value.map(c => c.id));
-                        documents.value = d || [];
-                    }
-                };
+                const currentUser = ref({});
+                const showCarModal = ref(false);
+                const showDocModal = ref(false);
+                const activeCarId = ref(null);
+                const cars = ref([]);
+                const documents = ref([]);
+                const newCar = ref({ name: '', plate: '' });
+                const newDoc = ref({ type: '', expiry: '' });
 
                 const handleAuth = async () => {
                     let fullNumber = `${selectedCountryCode.value}${localPhoneNumber.value.replace(/^0+/, '')}`;
                     if (isLoginMode.value) {
                         const { data } = await supabaseClient.from('users').select('*').eq('phone_number', fullNumber).eq('password', authPassword.value).single();
-                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); } else authError.value = "Auth failed";
+                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); }
                     } else {
                         const { data } = await supabaseClient.from('users').insert([{ name: authName.value, phone_number: fullNumber, password: authPassword.value }]).select().single();
-                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); } else authError.value = "Reg failed";
+                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); }
                     }
                 };
 
-                const deleteCar = async (id) => { if(confirm("Delete?")) { await supabaseClient.from('cars').delete().eq('id', id); fetchDashboardData(); } };
-                const deleteDocument = async (id) => { await supabaseClient.from('documents').delete().eq('id', id); fetchDashboardData(); };
-                const openDocModal = (id) => { selectedCarId.value = id; showDocModal.value = true; };
-                const submitDocument = async () => {
-                    await supabaseClient.from('documents').insert([{ car_id: selectedCarId.value, type: newDocType.value, expiry_date: newDocExpiry.value }]);
-                    showDocModal.value = false; fetchDashboardData();
+                const fetchDashboardData = async () => {
+                    const { data: c } = await supabaseClient.from('cars').select('*').eq('owner_id', currentUser.value.id);
+                    cars.value = c || [];
+                    const { data: d } = await supabaseClient.from('documents').select('*').in('car_id', cars.value.map(c => c.id));
+                    documents.value = d || [];
                 };
 
-                return { isLoggedIn, isLoginMode, authName, authPassword, selectedCountryCode, localPhoneNumber, handleAuth, currentUser, cars, documents, isExpiringSoonOrExpired, actionNeededCount, deleteCar, deleteDocument, showDocModal, openDocModal, submitDocument, newDocType, newDocExpiry, logout: () => window.location.reload() };
+                const submitCar = async () => {
+                    await supabaseClient.from('cars').insert([{ owner_id: currentUser.value.id, name: newCar.name, plate_number: newCar.plate }]);
+                    showCarModal.value = false;
+                    fetchDashboardData();
+                };
+
+                const openDocModal = (id) => { activeCarId.value = id; showDocModal.value = true; };
+                
+                const submitDoc = async () => {
+                    await supabaseClient.from('documents').insert([{ car_id: activeCarId.value, type: newDoc.value.type, expiry_date: newDoc.value.expiry }]);
+                    showDocModal.value = false;
+                    fetchDashboardData();
+                };
+
+                const deleteCar = async (id) => { await supabaseClient.from('cars').delete().eq('id', id); fetchDashboardData(); };
+                const deleteDoc = async (id) => { await supabaseClient.from('documents').delete().eq('id', id); fetchDashboardData(); };
+                
+                const isExpiring = (date) => new Date(date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                const actionRequiredCount = computed(() => documents.value.filter(d => isExpiring(d.expiry_date)).length);
+                const getCarDocuments = (id) => documents.value.filter(d => d.car_id === id);
+                const logout = () => window.location.reload();
+
+                return { isLoggedIn, isLoginMode, handleAuth, authName, authPassword, selectedCountryCode, localPhoneNumber, currentUser, showCarModal, showDocModal, newCar, newDoc, cars, documents, submitCar, submitDoc, deleteCar, deleteDoc, getCarDocuments, isExpiring, actionRequiredCount, logout };
             }
         }).mount('#app');
     </script>
