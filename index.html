@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Fleet Vault</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f4f4f5',
+                            100: '#e4e4e7',
+                            900: '#18181b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Smooth scrolling and subtle animations */
+        body { -webkit-font-smoothing: antialiased; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-enter-active, .slide-leave-active { transition: all 0.3s ease; }
+        .slide-enter-from, .slide-leave-to { opacity: 0; transform: translateY(-10px); }
+        
+        /* Custom Scrollbar for tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-800 min-h-screen">
+
+    <div id="app" class="max-w-6xl mx-auto p-4 md:p-8" v-cloak>
+        
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-zinc-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-zinc-200">
+                    <i class="fa-solid fa-car-side text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-zinc-900">Fleet Vault</h1>
+                    <p class="text-zinc-500 text-sm font-medium mt-0.5">Automated document & compliance tracking</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <button @click="showCarModal = true" class="bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-800 px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-zinc-400"></i> Add Vehicle
+                </button>
+                <button @click="showDocModal = true" class="bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-zinc-300 transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-circle-plus text-zinc-400"></i> Add Document
+                </button>
+            </div>
+        </header>
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-zinc-100 flex items-center gap-5 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg relative z-10">
+                    <i class="fa-solid fa-warehouse"></i>
+                </div>
+                <div class="relative z-10">
+                    <p class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Total Vehicles</p>
+                    <p class="text-3xl font-bold text-zinc-900">{{ cars.length }}</p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-zinc-100 flex items-center gap-5 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-r from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-lg relative z-10">
+                    <i class="fa-solid fa-file-shield"></i>
+                </div>
+                <div class="relative z-10">
+                    <p class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Active Docs</p>
+                    <p class="text-3xl font-bold text-zinc-900">{{ documents.length }}</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-zinc-100 flex items-center gap-5 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-r from-rose-50 to-transparent opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center text-lg relative z-10">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="relative z-10">
+                    <p class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Action Needed</p>
+                    <p class="text-3xl font-bold" :class="alertCount > 0 ? 'text-rose-600' : 'text-zinc-900'">{{ alertCount }}</p>
+                </div>
+            </div>
+        </section>
+
+        <main class="space-y-8">
+            <TransitionGroup name="slide">
+                <div v-for="car in cars" :key="car.id" class="bg-white rounded-2xl shadow-sm border border-zinc-200 overflow-hidden">
+                    
+                    <div class="bg-zinc-50/50 px-6 py-5 border-b border-zinc-100 flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-white border border-zinc-200 rounded-full flex items-center justify-center text-zinc-400 shadow-sm">
+                                <i class="fa-solid fa-car"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-zinc-900">{{ car.name }}</h2>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-xs font-mono bg-zinc-200/50 text-zinc-600 px-2 py-0.5 rounded border border-zinc-200 tracking-wider font-semibold">{{ car.plate }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button @click="confirmDelete('car', car)" class="w-9 h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition" title="Remove Vehicle">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-white border-b border-zinc-100 text-zinc-400 text-xs uppercase font-bold tracking-wider">
+                                    <th class="px-6 py-4">Document Type</th>
+                                    <th class="px-6 py-4">Valid Until</th>
+                                    <th class="px-6 py-4">Status</th>
+                                    <th class="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-50">
+                                <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="hover:bg-zinc-50/50 transition group">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <i class="fa-regular fa-file-lines text-zinc-400"></i>
+                                            <span class="font-medium text-zinc-900">{{ doc.type }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 font-mono text-sm text-zinc-600">{{ formatDate(doc.expiry) }}</td>
+                                    <td class="px-6 py-4">
+                                        <span :class="getStatusStyles(doc.expiry)" class="px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 border">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                            {{ getStatusText(doc.expiry) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button @click="renewDocument(doc.id)" class="bg-zinc-100 hover:bg-zinc-900 hover:text-white text-zinc-700 text-xs font-semibold px-4 py-2 rounded-lg transition" title="Add 1 Year to Expiry">
+                                                <i class="fa-solid fa-rotate-right mr-1"></i> Renew
+                                            </button>
+                                            <button @click="confirmDelete('doc', doc)" class="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition border border-transparent hover:border-rose-100" title="Delete Document">
+                                                <i class="fa-solid fa-xmark text-lg"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="getCarDocuments(car.id).length === 0">
+                                    <td colspan="4" class="text-center py-10">
+                                        <div class="w-12 h-12 bg-zinc-50 text-zinc-300 rounded-full flex items-center justify-center text-xl mx-auto mb-3">
+                                            <i class="fa-solid fa-folder-open"></i>
+                                        </div>
+                                        <p class="text-zinc-500 text-sm">No documents attached to this vehicle.</p>
+                                        <button @click="openDocModalFor(car.id)" class="text-blue-600 font-semibold text-sm hover:underline mt-2">Add the first document</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </TransitionGroup>
+            
+            <div v-if="cars.length === 0" class="text-center py-20 bg-white rounded-3xl border border-zinc-200 border-dashed">
+                <div class="w-16 h-16 bg-zinc-50 text-zinc-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-car-tunnel"></i>
+                </div>
+                <h3 class="text-lg font-bold text-zinc-900 mb-1">Your fleet is empty</h3>
+                <p class="text-zinc-500 text-sm mb-4">Add your first vehicle to start tracking documents.</p>
+                <button @click="showCarModal = true" class="bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition">
+                    + Add Vehicle
+                </button>
+            </div>
+        </main>
+
+        <Transition name="fade">
+            <div v-if="showCarModal" class="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl max-w-md w-full p-7 shadow-2xl border border-zinc-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-zinc-900">Add New Vehicle</h3>
+                        <button @click="showCarModal = false" class="text-zinc-400 hover:text-zinc-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wide mb-2">Make & Model</label>
+                            <input type="text" v-model="newCar.name" placeholder="e.g., Range Rover Velar" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-sm transition" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wide mb-2">License Plate</label>
+                            <input type="text" v-model="newCar.plate" placeholder="e.g., ABC-123" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-sm font-mono uppercase transition" />
+                        </div>
+                    </div>
+                    <button @click="submitCar" class="w-full mt-8 py-3 bg-zinc-900 text-white rounded-xl text-sm font-bold hover:bg-zinc-800 transition shadow-md shadow-zinc-300">
+                        Save Vehicle Profile
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
+        <Transition name="fade">
+            <div v-if="showDocModal" class="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl max-w-md w-full p-7 shadow-2xl border border-zinc-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-zinc-900">Attach Document</h3>
+                        <button @click="showDocModal = false" class="text-zinc-400 hover:text-zinc-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    </div>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wide mb-2">Assign to Vehicle</label>
+                            <select v-model="newDoc.carId" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-sm transition appearance-none">
+                                <option value="" disabled>Select a vehicle...</option>
+                                <option v-for="car in cars" :value="car.id">{{ car.name }} ({{ car.plate }})</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wide mb-2">Document Type</label>
+                            <input type="text" v-model="newDoc.type" placeholder="e.g., Vehicle License, Insurance" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-sm transition" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase tracking-wide mb-2">Expiration Date</label>
+                            <input type="date" v-model="newDoc.expiry" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:bg-white text-sm transition" />
+                        </div>
+                    </div>
+                    <button @click="submitDoc" class="w-full mt-8 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-md shadow-blue-200">
+                        Add Document to Vault
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
+        <Transition name="fade">
+            <div v-if="deleteModal.isOpen" class="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-100 text-center">
+                    <div class="w-16 h-16 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-zinc-900 mb-2">Are you sure?</h3>
+                    <p class="text-zinc-500 text-sm mb-6">
+                        You are about to delete <strong class="text-zinc-800">{{ deleteModal.itemName }}</strong>. 
+                        <span v-if="deleteModal.type === 'car'">This will also delete all documents attached to this vehicle.</span>
+                        This action cannot be undone.
+                    </p>
+                    <div class="flex gap-3">
+                        <button @click="deleteModal.isOpen = false" class="flex-1 py-2.5 bg-zinc-100 text-zinc-700 rounded-xl text-sm font-bold hover:bg-zinc-200 transition">
+                            Cancel
+                        </button>
+                        <button @click="executeDelete" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl text-sm font-bold hover:bg-rose-700 transition shadow-md shadow-rose-200">
+                            Yes, Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const showCarModal = ref(false);
+                const showDocModal = ref(false);
+                
+                const deleteModal = ref({
+                    isOpen: false,
+                    type: '',
+                    targetId: null,
+                    itemName: ''
+                });
+
+                const getFutureDate = (days) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + days);
+                    return d.toISOString().split('T')[0];
+                };
+
+                const cars = ref([
+                    { id: 1, name: 'Toyota Camry XLE', plate: 'LND-123AA' },
+                    { id: 2, name: 'Honda Civic Sport', plate: 'KJA-789BB' }
+                ]);
+
+                const documents = ref([
+                    { id: 1, carId: 1, type: 'Vehicle License', expiry: getFutureDate(365) },
+                    { id: 2, carId: 1, type: 'Comprehensive Insurance', expiry: getFutureDate(15) },
+                    { id: 3, carId: 2, type: 'Road Worthiness', expiry: getFutureDate(-5) },
+                ]);
+
+                const newCar = ref({ name: '', plate: '' });
+                const newDoc = ref({ carId: '', type: '', expiry: '' });
+                
+                const calculateDaysRemaining = (expiryDate) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const exp = new Date(expiryDate);
+                    const diffTime = exp - today;
+                    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                };
+
+                const getStatusText = (expiryDate) => {
+                    const days = calculateDaysRemaining(expiryDate);
+                    if (days < 0) return 'Expired';
+                    if (days <= 30) return 'Expiring Soon';
+                    return 'Valid';
+                };
+
+                const getStatusStyles = (expiryDate) => {
+                    const days = calculateDaysRemaining(expiryDate);
+                    if (days < 0) return 'bg-rose-50 text-rose-700 border-rose-200';
+                    if (days <= 30) return 'bg-amber-50 text-amber-700 border-amber-200';
+                    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                };
+
+                const formatDate = (dateString) => {
+                    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                    return new Date(dateString).toLocaleDateString('en-US', options);
+                };
+
+                const alertCount = computed(() => {
+                    return documents.value.filter(d => calculateDaysRemaining(d.expiry) <= 30).length;
+                });
+
+                const getCarDocuments = (carId) => {
+                    return documents.value.filter(d => d.carId === carId);
+                };
+
+                const openDocModalFor = (carId) => {
+                    newDoc.value.carId = carId;
+                    showDocModal.value = true;
+                };
+
+                const renewDocument = (docId) => {
+                    const target = documents.value.find(d => d.id === docId);
+                    if (target) {
+                        const currentExp = new Date(target.expiry);
+                        currentExp.setFullYear(currentExp.getFullYear() + 1);
+                        target.expiry = currentExp.toISOString().split('T')[0];
+                    }
+                };
+
+                const submitCar = () => {
+                    if (newCar.value.name && newCar.value.plate) {
+                        cars.value.unshift({
+                            id: Date.now(),
+                            name: newCar.value.name,
+                            plate: newCar.value.plate.toUpperCase()
+                        });
+                        newCar.value = { name: '', plate: '' };
+                        showCarModal.value = false;
+                    }
+                };
+
+                const submitDoc = () => {
+                    if (newDoc.value.carId && newDoc.value.type && newDoc.value.expiry) {
+                        documents.value.unshift({
+                            id: Date.now(),
+                            carId: newDoc.value.carId,
+                            type: newDoc.value.type,
+                            expiry: newDoc.value.expiry
+                        });
+                        newDoc.value = { carId: '', type: '', expiry: '' };
+                        showDocModal.value = false;
+                    }
+                };
+
+                const confirmDelete = (type, item) => {
+                    deleteModal.value = {
+                        isOpen: true,
+                        type: type,
+                        targetId: item.id,
+                        itemName: type === 'car' ? item.name : item.type
+                    };
+                };
+
+                const executeDelete = () => {
+                    const { type, targetId } = deleteModal.value;
+                    
+                    if (type === 'car') {
+                        cars.value = cars.value.filter(c => c.id !== targetId);
+                        documents.value = documents.value.filter(d => d.carId !== targetId);
+                    } else if (type === 'doc') {
+                        documents.value = documents.value.filter(d => d.id !== targetId);
+                    }
+                    
+                    deleteModal.value.isOpen = false;
+                };
+
+                return {
+                    cars, documents, showCarModal, showDocModal, newCar, newDoc,
+                    alertCount, getCarDocuments, getStatusText, getStatusStyles, formatDate,
+                    renewDocument, submitCar, submitDoc, openDocModalFor,
+                    deleteModal, confirmDelete, executeDelete
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
