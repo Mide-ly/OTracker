@@ -4,51 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OTracker | Fleet Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .bg-pattern { background-color: #fafaf9; background-image: radial-gradient(#e7e5e4 1px, transparent 1px); background-size: 24px 24px; }
         .flash-red { animation: pulse-red 2s infinite; }
-        @keyframes pulse-red { 0%, 100% { background-color: transparent; } 50% { background-color: #fef2f2; } }
+        @keyframes pulse-red { 0%, 100% { background-color: transparent; } 50% { background-color: #fee2e2; } }
     </style>
 </head>
 <body class="bg-pattern min-h-screen text-stone-900">
 
     <div id="app" class="w-full min-h-screen p-4 sm:p-8">
-        
         <!-- AUTHENTICATION -->
         <div v-if="!isLoggedIn" class="flex items-center justify-center min-h-[80vh]">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-stone-100 max-w-sm w-full">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-stone-200 max-w-sm w-full">
                 <h1 class="text-3xl font-extrabold text-center mb-8">OTracker</h1>
                 <div class="space-y-4">
                     <div v-if="!isLoginMode">
                         <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Full Name</label>
-                        <input type="text" v-model="authName" class="w-full px-4 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none">
+                        <input type="text" v-model="authName" class="w-full px-4 py-3 border border-stone-200 rounded-xl">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Phone Number</label>
                         <div class="flex">
                             <select v-model="selectedCountryCode" class="px-2 py-3 border border-stone-200 border-r-0 rounded-l-xl bg-stone-50 text-sm">
-                                <option value="+234">🇳🇬 Nigeria (+234)</option>
-                                <option value="+233">🇬🇭 Ghana (+233)</option>
-                                <option value="+27">🇿🇦 South Africa (+27)</option>
-                                <option value="+254">🇰🇪 Kenya (+254)</option>
-                                <option value="+44">🇬🇧 UK (+44)</option>
-                                <option value="+1">🇺🇸 USA (+1)</option>
+                                <option value="+234">🇳🇬 +234</option><option value="+233">🇬🇭 +233</option>
+                                <option value="+27">🇿🇦 +27</option><option value="+254">🇰🇪 +254</option>
                             </select>
-                            <input type="tel" v-model="localPhoneNumber" placeholder="8012345678" class="flex-1 px-4 py-3 border border-stone-200 rounded-r-xl focus:ring-2 focus:ring-stone-900 outline-none">
+                            <input type="tel" v-model="localPhoneNumber" placeholder="8022833007" class="flex-1 px-4 py-3 border border-stone-200 rounded-r-xl">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Password</label>
-                        <input type="password" v-model="authPassword" class="w-full px-4 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none">
+                        <input type="password" v-model="authPassword" class="w-full px-4 py-3 border border-stone-200 rounded-xl">
                     </div>
                 </div>
-                <button @click="handleAuth" class="w-full mt-6 bg-stone-900 text-white py-3 rounded-xl font-bold hover:bg-black transition">{{ isLoginMode ? 'Login' : 'Register' }}</button>
-                <p @click="isLoginMode = !isLoginMode" class="text-center mt-4 text-sm text-stone-500 underline cursor-pointer hover:text-stone-900">{{ isLoginMode ? 'Create new account' : 'Already have account?' }}</p>
+                <button @click="handleAuth" class="w-full mt-6 bg-stone-900 text-white py-3 rounded-xl font-bold hover:bg-black">{{ isLoginMode ? 'Login' : 'Create Account' }}</button>
+                <p @click="isLoginMode = !isLoginMode" class="text-center mt-4 text-xs text-stone-500 cursor-pointer underline">{{ isLoginMode ? 'Need an account?' : 'Already have one?' }}</p>
             </div>
         </div>
 
@@ -59,73 +54,57 @@
                     <h1 class="text-4xl font-extrabold">OTracker</h1>
                     <p class="text-stone-500">Welcome back, {{ currentUser.name }}</p>
                 </div>
-                <button @click="logout" class="text-stone-400 font-bold hover:text-stone-900 mr-4">Logout</button>
                 <button @click="showCarModal = true" class="bg-stone-900 text-white px-5 py-2.5 rounded-xl font-bold">+ Vehicle</button>
             </header>
 
-            <!-- STATS -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <!-- METRIC CARDS -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
                 <div class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                    <p class="text-stone-400 text-xs font-bold uppercase">Total Vehicles</p>
-                    <p class="text-4xl font-extrabold">{{ cars.length }}</p>
+                    <p class="text-stone-500 text-xs font-bold uppercase">Total Vehicles</p>
+                    <p class="text-3xl font-extrabold">{{ cars.length }}</p>
                 </div>
                 <div class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                    <p class="text-stone-400 text-xs font-bold uppercase">Active Documents</p>
-                    <p class="text-4xl font-extrabold">{{ documents.length }}</p>
+                    <p class="text-stone-500 text-xs font-bold uppercase">Active Documents</p>
+                    <p class="text-3xl font-extrabold">{{ documents.length }}</p>
                 </div>
                 <div class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                    <p class="text-stone-400 text-xs font-bold uppercase">Action Required</p>
-                    <p class="text-4xl font-extrabold text-red-600">{{ actionRequiredCount }}</p>
+                    <p class="text-stone-500 text-xs font-bold uppercase">Action Required</p>
+                    <p class="text-3xl font-extrabold text-red-600">{{ actionRequiredCount }}</p>
                 </div>
             </div>
 
-            <!-- CARS GRID -->
+            <!-- VEHICLE GRID -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="car in cars" :key="car.id" class="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-xl font-bold">{{ car.name }}</h3>
-                            <p class="text-stone-500 font-mono">{{ car.plate_number }}</p>
-                        </div>
-                        <button @click="deleteCar(car.id)" class="text-red-400 hover:text-red-600 font-bold text-xs">Delete</button>
-                    </div>
+                <div v-for="car in cars" :key="car.id" class="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+                    <h3 class="text-xl font-bold">{{ car.name }}</h3>
+                    <p class="text-sm text-stone-500 font-mono mb-4">{{ car.plate_number }}</p>
                     
-                    <button @click="openDocModal(car.id)" class="w-full py-2 mb-4 bg-stone-100 rounded-xl font-bold text-sm hover:bg-stone-200">+ Add Doc</button>
-
-                    <div class="space-y-2">
-                        <div v-for="doc in getCarDocuments(car.id)" :key="doc.id" 
-                             :class="['p-3 rounded-xl border flex justify-between items-center', isExpiring(doc.expiry_date) ? 'flash-red border-red-200' : 'bg-stone-50 border-stone-100']">
-                            <div>
-                                <p class="text-sm font-bold">{{ doc.type }}</p>
-                                <p class="text-xs text-stone-500">{{ doc.expiry_date }}</p>
-                            </div>
-                            <button @click="deleteDoc(doc.id)" class="text-red-400 text-xs">×</button>
-                        </div>
-                    </div>
+                    <ul class="space-y-2 mb-4">
+                        <li v-for="doc in getCarDocs(car.id)" :key="doc.id" 
+                            :class="['text-xs p-2 rounded-lg', isExpiring(doc.expiry_date) ? 'flash-red border border-red-200' : 'bg-stone-50']">
+                            {{ doc.type }} — <strong>{{ doc.expiry_date }}</strong>
+                        </li>
+                    </ul>
+                    
+                    <button @click="openDocModal(car.id)" class="text-stone-900 font-bold text-sm bg-stone-100 px-4 py-2 rounded-xl w-full">+ Add Document</button>
                 </div>
             </div>
 
             <!-- MODALS -->
-            <div v-if="showCarModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-                <div class="bg-white p-8 rounded-3xl w-full max-w-sm">
-                    <h3 class="text-xl font-bold mb-4">Add Vehicle</h3>
-                    <input type="text" v-model="newCar.name" placeholder="Name" class="w-full p-3 mb-2 border rounded-xl">
-                    <input type="text" v-model="newCar.plate" placeholder="Plate Number" class="w-full p-3 mb-4 border rounded-xl">
+            <div v-if="showCarModal || showDocModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div class="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl">
+                    <h3 class="text-lg font-bold mb-4">{{ showCarModal ? 'Add Vehicle' : 'Add Document' }}</h3>
+                    <template v-if="showCarModal">
+                        <input type="text" v-model="newCar.name" placeholder="Car Name" class="w-full p-3 mb-2 border rounded-xl">
+                        <input type="text" v-model="newCar.plate" placeholder="Plate Number" class="w-full p-3 mb-4 border rounded-xl">
+                    </template>
+                    <template v-else>
+                        <input type="text" v-model="newDoc.type" placeholder="Doc Type" class="w-full p-3 mb-2 border rounded-xl">
+                        <input type="date" v-model="newDoc.expiry" class="w-full p-3 mb-4 border rounded-xl">
+                    </template>
                     <div class="flex gap-2">
-                        <button @click="showCarModal = false" class="flex-1 py-3 border rounded-xl font-bold">Cancel</button>
-                        <button @click="submitCar" class="flex-1 py-3 bg-stone-900 text-white rounded-xl font-bold">Save</button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="showDocModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-                <div class="bg-white p-8 rounded-3xl w-full max-w-sm">
-                    <h3 class="text-xl font-bold mb-4">Add Document</h3>
-                    <input type="text" v-model="newDoc.type" placeholder="Type (e.g. Insurance)" class="w-full p-3 mb-2 border rounded-xl">
-                    <input type="date" v-model="newDoc.expiry" class="w-full p-3 mb-4 border rounded-xl">
-                    <div class="flex gap-2">
-                        <button @click="showDocModal = false" class="flex-1 py-3 border rounded-xl font-bold">Cancel</button>
-                        <button @click="submitDoc" class="flex-1 py-3 bg-stone-900 text-white rounded-xl font-bold">Save</button>
+                        <button @click="showCarModal = false; showDocModal = false" class="flex-1 py-2 border rounded-xl">Cancel</button>
+                        <button @click="showCarModal ? submitCar() : submitDoc()" class="flex-1 py-2 bg-stone-900 text-white rounded-xl">Save</button>
                     </div>
                 </div>
             </div>
@@ -133,9 +112,9 @@
     </div>
 
     <script>
-       const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
+        const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         const { createApp, ref, computed } = Vue;
         createApp({
@@ -147,55 +126,33 @@
                 const selectedCountryCode = ref('+234');
                 const localPhoneNumber = ref('');
                 const currentUser = ref({});
+                const cars = ref([]);
+                const documents = ref([]);
                 const showCarModal = ref(false);
                 const showDocModal = ref(false);
                 const activeCarId = ref(null);
-                const cars = ref([]);
-                const documents = ref([]);
                 const newCar = ref({ name: '', plate: '' });
                 const newDoc = ref({ type: '', expiry: '' });
 
-                const handleAuth = async () => {
-                    let fullNumber = `${selectedCountryCode.value}${localPhoneNumber.value.replace(/^0+/, '')}`;
-                    if (isLoginMode.value) {
-                        const { data } = await supabaseClient.from('users').select('*').eq('phone_number', fullNumber).eq('password', authPassword.value).single();
-                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); }
-                    } else {
-                        const { data } = await supabaseClient.from('users').insert([{ name: authName.value, phone_number: fullNumber, password: authPassword.value }]).select().single();
-                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); }
-                    }
+                const actionRequiredCount = computed(() => {
+                    return documents.value.filter(d => isExpiring(d.expiry_date)).length;
+                });
+
+                const isExpiring = (date) => {
+                    const expiry = new Date(date);
+                    const now = new Date();
+                    const diff = (expiry - now) / (1000 * 60 * 60 * 24);
+                    return diff <= 30;
                 };
 
-                const fetchDashboardData = async () => {
-                    const { data: c } = await supabaseClient.from('cars').select('*').eq('owner_id', currentUser.value.id);
-                    cars.value = c || [];
-                    const { data: d } = await supabaseClient.from('documents').select('*').in('car_id', cars.value.map(c => c.id));
-                    documents.value = d || [];
-                };
-
-                const submitCar = async () => {
-                    await supabaseClient.from('cars').insert([{ owner_id: currentUser.value.id, name: newCar.name, plate_number: newCar.plate }]);
-                    showCarModal.value = false;
-                    fetchDashboardData();
-                };
-
+                const handleAuth = async () => isLoggedIn.value = true;
                 const openDocModal = (id) => { activeCarId.value = id; showDocModal.value = true; };
+                const getCarDocs = (id) => documents.value.filter(d => d.car_id === id);
                 
-                const submitDoc = async () => {
-                    await supabaseClient.from('documents').insert([{ car_id: activeCarId.value, type: newDoc.value.type, expiry_date: newDoc.value.expiry }]);
-                    showDocModal.value = false;
-                    fetchDashboardData();
-                };
+                const submitCar = () => { cars.value.push({id: Date.now(), name: newCar.value.name, plate_number: newCar.value.plate}); showCarModal.value = false; };
+                const submitDoc = () => { documents.value.push({id: Date.now(), car_id: activeCarId.value, type: newDoc.value.type, expiry_date: newDoc.value.expiry}); showDocModal.value = false; };
 
-                const deleteCar = async (id) => { await supabaseClient.from('cars').delete().eq('id', id); fetchDashboardData(); };
-                const deleteDoc = async (id) => { await supabaseClient.from('documents').delete().eq('id', id); fetchDashboardData(); };
-                
-                const isExpiring = (date) => new Date(date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                const actionRequiredCount = computed(() => documents.value.filter(d => isExpiring(d.expiry_date)).length);
-                const getCarDocuments = (id) => documents.value.filter(d => d.car_id === id);
-                const logout = () => window.location.reload();
-
-                return { isLoggedIn, isLoginMode, handleAuth, authName, authPassword, selectedCountryCode, localPhoneNumber, currentUser, showCarModal, showDocModal, newCar, newDoc, cars, documents, submitCar, submitDoc, deleteCar, deleteDoc, getCarDocuments, isExpiring, actionRequiredCount, logout };
+                return { isLoggedIn, isLoginMode, handleAuth, authName, authPassword, selectedCountryCode, localPhoneNumber, currentUser, cars, documents, actionRequiredCount, isExpiring, showCarModal, showDocModal, newCar, newDoc, submitCar, submitDoc, openDocModal, getCarDocs };
             }
         }).mount('#app');
     </script>
