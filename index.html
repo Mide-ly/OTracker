@@ -3,25 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTracker | Fleet Management</title>
+    <title>OTracker | Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- Supabase JS Client -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.supabase.com/supabase-js/v2/supabase.min.js"></script>
     <style>
         @keyframes pulse-red { 0%, 100% { background-color: #fff; } 50% { background-color: #fee2e2; } }
         .flash-red { animation: pulse-red 2s infinite; }
     </style>
 </head>
-<body class="bg-stone-50 min-h-screen text-stone-900 p-4 sm:p-8">
+<body class="bg-stone-50 min-h-screen text-stone-900">
 
-<div id="app" class="max-w-6xl mx-auto">
+<div id="app" class="p-4 sm:p-8 max-w-6xl mx-auto">
     <!-- AUTH SCREEN -->
     <div v-if="!user" class="flex justify-center mt-20">
         <div class="bg-white p-8 rounded-3xl shadow-xl border w-full max-w-sm">
             <h1 class="text-3xl font-extrabold text-center mb-6">OTracker</h1>
             <div class="space-y-4">
-                <input v-model="phone" type="tel" placeholder="Phone Number (e.g. 802...)" class="w-full p-3 border rounded-xl">
+                <input v-model="phone" type="tel" placeholder="Phone Number" class="w-full p-3 border rounded-xl">
                 <input v-model="password" type="password" placeholder="Password" class="w-full p-3 border rounded-xl">
                 <button @click="login" class="w-full bg-stone-900 text-white py-3 rounded-xl font-bold">Login</button>
             </div>
@@ -31,7 +30,7 @@
     <!-- DASHBOARD SCREEN -->
     <div v-else>
         <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-extrabold">OTracker Dashboard</h1>
+            <h1 class="text-3xl font-extrabold">Dashboard</h1>
             <button @click="showCarModal = true" class="bg-stone-900 text-white px-6 py-2 rounded-xl font-bold">+ Vehicle</button>
         </header>
 
@@ -73,19 +72,21 @@
     <!-- MODALS -->
     <div v-if="showCarModal || showDocModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
         <div class="bg-white p-6 rounded-2xl w-full max-w-sm">
-            <h3 class="font-bold mb-4">{{ showCarModal ? 'New Vehicle' : 'New Document' }}</h3>
+            <h3 class="font-bold mb-4">{{ showCarModal ? 'Add Vehicle' : 'Add Document' }}</h3>
             <input v-if="showCarModal" v-model="newCar.name" placeholder="Name" class="w-full p-3 mb-2 border rounded-xl">
             <input v-if="showCarModal" v-model="newCar.plate" placeholder="Plate" class="w-full p-3 mb-4 border rounded-xl">
             <input v-if="showDocModal" v-model="newDoc.type" placeholder="Type" class="w-full p-3 mb-2 border rounded-xl">
             <input v-if="showDocModal" v-model="newDoc.expiry" type="date" class="w-full p-3 mb-4 border rounded-xl">
-            <button @click="showCarModal ? addCar() : addDoc()" class="w-full bg-stone-900 text-white py-2 rounded-xl font-bold">Save</button>
+            <div class="flex gap-2">
+                <button @click="showCarModal = false; showDocModal = false" class="flex-1 py-2 border rounded-xl font-bold">Cancel</button>
+                <button @click="showCarModal ? addCar() : addDoc()" class="flex-1 py-2 bg-stone-900 text-white rounded-xl font-bold">Save</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // FIX: Renamed 'supabase' to 'supabaseClient' to avoid naming conflicts
-    const supabaseClient = window.supabase.createClient('https://qxbwixpeuutmvxngxxos.supabase.co', 'Ysb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg');
+    const client = window.supabase.createClient('YOUR_URL', 'YOUR_KEY');
     const { createApp, ref, computed } = Vue;
 
     createApp({
@@ -102,24 +103,24 @@
             const newDoc = ref({ type: '', expiry: '' });
 
             const login = async () => {
-                const { data } = await supabaseClient.from('users').select('*').eq('phone_number', phone.value).eq('password', password.value).single();
+                const { data } = await client.from('users').select('*').eq('phone_number', phone.value).eq('password', password.value).single();
                 if (data) { user.value = data; loadData(); }
             };
 
             const loadData = async () => {
-                const { data: c } = await supabaseClient.from('cars').select('*').eq('owner_id', user.value.id);
+                const { data: c } = await client.from('cars').select('*').eq('owner_id', user.value.id);
                 cars.value = c || [];
-                const { data: d } = await supabaseClient.from('documents').select('*');
+                const { data: d } = await client.from('documents').select('*');
                 docs.value = d || [];
             };
 
             const addCar = async () => {
-                await supabaseClient.from('cars').insert({ owner_id: user.value.id, name: newCar.value.name, plate_number: newCar.value.plate });
+                await client.from('cars').insert({ owner_id: user.value.id, name: newCar.value.name, plate_number: newCar.value.plate });
                 showCarModal.value = false; loadData();
             };
 
             const addDoc = async () => {
-                await supabaseClient.from('documents').insert({ car_id: activeCarId.value, type: newDoc.value.type, expiry_date: newDoc.value.expiry });
+                await client.from('documents').insert({ car_id: activeCarId.value, type: newDoc.value.type, expiry_date: newDoc.value.expiry });
                 showDocModal.value = false; loadData();
             };
 
@@ -132,8 +133,8 @@
 
             const actionNeededCount = computed(() => docs.value.filter(d => isExpiring(d.expiry_date)).length);
 
-            const deleteCar = async (id) => { await supabaseClient.from('cars').delete().eq('id', id); loadData(); };
-            const deleteDoc = async (id) => { await supabaseClient.from('documents').delete().eq('id', id); loadData(); };
+            const deleteCar = async (id) => { await client.from('cars').delete().eq('id', id); loadData(); };
+            const deleteDoc = async (id) => { await client.from('documents').delete().eq('id', id); loadData(); };
 
             return { user, phone, password, cars, docs, showCarModal, showDocModal, newCar, newDoc, login, addCar, addDoc, prepareDoc, isExpiring, actionNeededCount, deleteCar, deleteDoc };
         }
