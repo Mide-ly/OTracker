@@ -456,17 +456,24 @@
                 };
 
                 const submitDriver = async () => {
-                    await supabaseClient.from('drivers').insert([{ 
-                        owner_id: currentUser.value.id, 
-                        name: newDriver.value.name, 
-                        phone: newDriver.value.phone,
-                        license_expiry: newDriver.value.expiry
-                    }]);
-                    newDriver.value = { name: '', phone: '', expiry: '' };
-                    showDriverModal.value = false;
-                    activeTab.value = 'drivers'; // Switch to drivers tab to see the new addition
-                    fetchFleet();
-                };
+    const { data, error } = await supabaseClient.from('drivers').insert([{ 
+        owner_id: currentUser.value.id, 
+        name: newDriver.value.name, 
+        phone: newDriver.value.phone,
+        license_expiry: newDriver.value.expiry
+    }]);
+
+    if (error) {
+        alert("Failed to add driver: " + error.message);
+        console.error("Supabase Error:", error);
+        return; // Stop here if there's an error
+    }
+
+    newDriver.value = { name: '', phone: '', expiry: '' };
+    showDriverModal.value = false;
+    activeTab.value = 'drivers';
+    fetchFleet();
+};
 
                 const openEditCar = (car) => {
                     editCarData.value = { id: car.id, name: car.name, plate: car.plate_number, driver_id: car.driver_id || '' };
