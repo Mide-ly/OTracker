@@ -104,10 +104,22 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Add Document Modal -->
+        <div v-if="showDocModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+            <div class="bg-white p-6 rounded-2xl w-full max-w-sm">
+                <h2 class="text-xl font-bold mb-4">Add Document</h2>
+                <input v-model="newDocType" placeholder="Type (e.g. Insurance)" class="w-full p-2 border rounded mb-2">
+                <input type="date" v-model="newDocExpiry" class="w-full p-2 border rounded mb-4">
+                <div class="flex gap-2">
+                    <button @click="submitDocument" class="flex-1 bg-stone-900 text-white py-2 rounded-lg font-bold">Save</button>
+                    <button @click="showDocModal = false" class="flex-1 border py-2 rounded-lg font-bold">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // REPLACE WITH YOUR ACTUAL KEYS
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -121,8 +133,16 @@
                 const cars = ref([]);
                 const documents = ref([]);
                 const showCarModal = ref(false);
+                const showDocModal = ref(false);
+                const selectedCarId = ref(null);
+                const newDocType = ref('');
+                const newDocExpiry = ref('');
+                const selectedCountryCode = ref('+234');
+                const localPhoneNumber = ref('');
+                const authPassword = ref('');
+                const authName = ref('');
+                const authError = ref('');
 
-                // Check for expiry within 30 days
                 const isExpiringSoonOrExpired = (dateStr) => {
                     const today = new Date();
                     const expiry = new Date(dateStr);
@@ -131,9 +151,7 @@
                     return diffDays <= 30;
                 };
 
-                const actionNeededCount = computed(() => {
-                    return documents.value.filter(doc => isExpiringSoonOrExpired(doc.expiry_date)).length;
-                });
+                const actionNeededCount = computed(() => documents.value.filter(doc => isExpiringSoonOrExpired(doc.expiry_date)).length);
 
                 const fetchDashboardData = async () => {
                     const { data: c } = await supabaseClient.from('cars').select('*').eq('owner_id', currentUser.value.id);
@@ -144,20 +162,26 @@
                     }
                 };
 
-                const deleteCar = async (id) => {
-                    if(confirm("Delete this vehicle and all attached documents?")) {
-                        await supabaseClient.from('cars').delete().eq('id', id);
-                        fetchDashboardData();
+                const handleAuth = async () => {
+                    let fullNumber = `${selectedCountryCode.value}${localPhoneNumber.value.replace(/^0+/, '')}`;
+                    if (isLoginMode.value) {
+                        const { data } = await supabaseClient.from('users').select('*').eq('phone_number', fullNumber).eq('password', authPassword.value).single();
+                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); } else authError.value = "Auth failed";
+                    } else {
+                        const { data } = await supabaseClient.from('users').insert([{ name: authName.value, phone_number: fullNumber, password: authPassword.value }]).select().single();
+                        if (data) { currentUser.value = data; isLoggedIn.value = true; fetchDashboardData(); } else authError.value = "Reg failed";
                     }
                 };
 
-                const deleteDocument = async (id) => {
-                    await supabaseClient.from('documents').delete().eq('id', id);
-                    fetchDashboardData();
+                const deleteCar = async (id) => { if(confirm("Delete?")) { await supabaseClient.from('cars').delete().eq('id', id); fetchDashboardData(); } };
+                const deleteDocument = async (id) => { await supabaseClient.from('documents').delete().eq('id', id); fetchDashboardData(); };
+                const openDocModal = (id) => { selectedCarId.value = id; showDocModal.value = true; };
+                const submitDocument = async () => {
+                    await supabaseClient.from('documents').insert([{ car_id: selectedCarId.value, type: newDocType.value, expiry_date: newDocExpiry.value }]);
+                    showDocModal.value = false; fetchDashboardData();
                 };
 
-                // ... (Keep existing auth and helper functions) ...
-                return { isLoggedIn, isLoginMode, currentUser, cars, documents, isExpiringSoonOrExpired, actionNeededCount, deleteCar, deleteDocument, logout: () => window.location.reload() };
+                return { isLoggedIn, isLoginMode, authName, authPassword, selectedCountryCode, localPhoneNumber, handleAuth, currentUser, cars, documents, isExpiringSoonOrExpired, actionNeededCount, deleteCar, deleteDocument, showDocModal, openDocModal, submitDocument, newDocType, newDocExpiry, logout: () => window.location.reload() };
             }
         }).mount('#app');
     </script>
