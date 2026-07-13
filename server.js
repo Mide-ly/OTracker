@@ -3,75 +3,57 @@ const express = require('express');
 const cron = require('node-cron');
 const { createClient } = require('@supabase/supabase-js');
 const twilio = require('twilio');
-const moment = require('moment');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-// Initialize Supabase and Twilio clients via environment variables
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+// Initialize Supabase & Twilio
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-// Standard health check route for cloud hosting platforms
-app.get('/', (req, res) => {
-    res.send('Car Reminder Engine is active and running.');
-});
+// Schedule task to run every day at 8:00 AM
+cron.schedule('0 8 * * *', async () => {
+    console.log('Running daily expiry check...');
 
-// The Reminder Logic Engine
-async function checkExpirations() {
-    console.log('Running daily expiration verification check...');
-    
-    const today = moment().startOf('day');
-    const oneMonthFromNow = moment().add(30, 'days').startOf('day');
+    const today = new Date();
+    const addDays = (days) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    };
+
+    const targetDates = [addDays(30), addDays(15), addDays(3)];
 
     try {
-        // Fetch documents joined with car information
-        const { data: documents, error } = await supabase
+        const { data: expiringDocs, error } = await supabase
             .from('documents')
             .select(`
-                id,
-                type,
-                expiry_date,
-                cars ( name, plate_number )
-            `);
+                id, type, expiry_date,
+                cars ( name, plate_number, users ( name, phone_number ) )
+            `)
+            .in('expiry_date', targetDates);
 
         if (error) throw error;
+        if (!expiringDocs || expiringDocs.length === 0) return console.log('No expiring documents today.');
 
-        for (const doc of documents) {
-            const expiry = moment(doc.expiry_date).startOf('day');
-            const carName = doc.cars?.name || 'Unknown Vehicle';
-            const plate = doc.cars?.plate_number || '';
+        for (const doc of expiringDocs) {
+            const car = doc.cars;
+            const user = car.users;
             
-            let messageType = null;
+            const message = `OTracker Alert: Hello ${user.name}, the ${doc.type} for your vehicle ${car.name} (${car.plate_number}) expires on ${doc.expiry_date}. Please renew it soon.`;
 
-            if (expiry.isSame(oneMonthFromNow)) {
-                messageType = 'expires in exactly 1 month';
-            } else if (expiry.isSame(today)) {
-                messageType = 'expires TODAY';
-            }
-
-            if (messageType) {
-                const messageBody = `🚗 *Car Document Reminder* 🚗\n\nThe *${doc.type}* for your vehicle *${carName}* (${plate}) ${messageType} [${expiry.format('YYYY-MM-DD')}].\n\nPlease log into your dashboard to renew and upload the updated copy.`;
-                
-                await twilioClient.messages.create({
-                    body: messageBody,
-                    from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
-                    to: `whatsapp:${process.env.YOUR_PERSONAL_PHONE}`
-                });
-                
-                console.log(`Notification dispatched successfully for ${carName} - ${doc.type}`);
-            }
+            await twilioClient.messages.create({
+                body: message,
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: user.phone_number
+            });
+            console.log(`Alert sent to ${user.phone_number}`);
         }
     } catch (err) {
-        console.error('Error executing expiration engine routine:', err.message);
+        console.error('Error during cron job:', err.message);
     }
-}
-
-// Schedule the task to execute every single day at 08:00 AM
-cron.schedule('0 8 * * *', () => {
-    checkExpirations();
 });
 
-app.listen(PORT, () => {
-    console.log(`Server listening effectively on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`OTracker Node backend running on port ${port}`);
 });

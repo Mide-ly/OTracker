@@ -1,17 +1,16 @@
 {
   "name": "car-document-reminder-backend",
   "version": "1.0.0",
-  "description": "Automated cron service for car document WhatsApp notifications",
+  "description": "Automated WhatsApp reminder engine for OTracker",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "moment": "^2.30.1",
-    "node-cron": "^3.0.3",
-    "twilio": "^4.19.0"
+    "@supabase/supabase-js": "^2.40.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^4.6.0",
+    "twilio": "^5.0.0"
   }
 }
