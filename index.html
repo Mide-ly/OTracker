@@ -376,6 +376,7 @@
                 const authPassword = ref('');
                 const authError = ref('');
                 const isSuccessMsg = ref(false);
+                const showPassword = ref(false);
                 
                 // Navigation
                 const activeTab = ref('fleet'); 
@@ -677,7 +678,7 @@
                     updateProfile, deleteAccount,
                     newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
                     authIdentifier, authPassword, authError, isSuccessMsg, profilePhone, currentUser, toggleAuthMode, isLoadingData,
-                    totalVehicles, activeCredentials, actionNeeded, isExpiringSoon
+                    totalVehicles, activeCredentials, actionNeeded, isExpiringSoon, showPassword
                 };
             }
         }).mount('#app');
