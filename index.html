@@ -10,133 +10,140 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Configures Tailwind to support manual Dark Mode toggling -->
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+
     <style>
+        /* Light Mode Pattern */
         .bg-pattern { background-color: #fafaf9; background-image: radial-gradient(#e7e5e4 1px, transparent 1px); background-size: 24px 24px; }
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        
+        /* Dark Mode Pattern */
+        .dark .bg-pattern { background-color: #1c1917; background-image: radial-gradient(#292524 1px, transparent 1px); }
+        .dark .glass { background: rgba(28, 25, 23, 0.7); border-color: rgba(68, 64, 60, 0.5); }
+        
         [v-cloak] { display: none; }
     </style>
 </head>
-<body class="bg-pattern text-stone-900 min-h-screen font-sans antialiased">
+<body class="bg-pattern text-stone-900 dark:text-stone-100 min-h-screen font-sans antialiased transition-colors duration-300">
 
     <div id="app" v-cloak class="w-full min-h-screen flex flex-col">
         
+        <!-- AUTHENTICATION SCREEN -->
         <div v-if="!isLoggedIn" class="flex-1 flex items-center justify-center p-4 sm:p-6">
-            <div class="glass w-full max-w-md p-8 sm:p-10 rounded-3xl shadow-2xl shadow-stone-200/50 border border-stone-200/60 relative">
+            <div class="glass w-full max-w-md p-8 sm:p-10 rounded-3xl shadow-2xl shadow-stone-200/50 dark:shadow-black/50 border border-stone-200/60 dark:border-stone-700 relative">
                 <div class="text-center mb-8">
-                    <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900 mb-2">OTracker</h1>
-                    <p class="text-stone-500 font-medium">{{ isLoginMode ? 'Login to your fleet vault.' : 'Create your secure OTracker account.' }}</p>
+                    <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900 dark:text-white mb-2">OTracker</h1>
+                    <p class="text-stone-500 dark:text-stone-400 font-medium">{{ isLoginMode ? 'Login to your fleet vault.' : 'Create your secure OTracker account.' }}</p>
                 </div>
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Email or Phone Number</label>
-                        <input type="text" v-model="authIdentifier" class="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none transition" placeholder="you@example.com or 080..." />
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Email or Phone Number</label>
+                        <input type="text" v-model="authIdentifier" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="you@example.com or 080..." />
                     </div>
                     <div>
-    <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Password</label>
-    <div class="relative">
-        <!-- Changed type to dynamically switch based on showPassword -->
-        <input :type="showPassword ? 'text' : 'password'" v-model="authPassword" class="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none pr-12 transition" />
-        
-        <!-- The Eye Button -->
-        <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-4 flex items-center text-stone-400 hover:text-stone-900 transition">
-            <!-- Eye Open Icon (Shows when password is hidden) -->
-            <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <!-- Eye Closed Icon with Slash (Shows when password is visible) -->
-            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
-            </svg>
-        </button>
-    </div>
-</div>
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Password</label>
+                        <div class="relative">
+                            <input :type="showPassword ? 'text' : 'password'" v-model="authPassword" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none pr-12 transition dark:text-white" />
+                            <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-4 flex items-center text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 transition">
+                                <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div v-if="authError" :class="isSuccessMsg ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'" class="mt-4 p-3 text-xs rounded-xl text-center font-medium">{{ authError }}</div>
+                <div v-if="authError" :class="isSuccessMsg ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'" class="mt-4 p-3 text-xs rounded-xl text-center font-medium">{{ authError }}</div>
                 
-                <button @click="handleAuth" :disabled="isLoading" class="w-full mt-8 bg-stone-900 hover:bg-stone-800 text-white py-4 rounded-xl font-bold transition shadow-lg shadow-stone-900/20 active:scale-[0.98]">
+                <button @click="handleAuth" :disabled="isLoading" class="w-full mt-8 bg-stone-900 dark:bg-white hover:bg-stone-800 dark:hover:bg-stone-200 text-white dark:text-stone-900 py-4 rounded-xl font-bold transition shadow-lg shadow-stone-900/20 dark:shadow-white/10 active:scale-[0.98]">
                     {{ isLoading ? 'Processing...' : (isLoginMode ? 'Access Vault' : 'Create Account') }}
                 </button>
                 
-                <button @click="toggleAuthMode" class="w-full mt-4 text-stone-400 hover:text-stone-900 text-sm font-medium transition">
+                <button @click="toggleAuthMode" class="w-full mt-4 text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-medium transition">
                     {{ isLoginMode ? 'Need an account? Register.' : 'Already have one? Login.' }}
                 </button>
             </div>
         </div>
 
+        <!-- MAIN DASHBOARD -->
         <div v-else class="flex-1 flex flex-col w-full h-full p-4 sm:p-8">
             <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-10">
                 <div>
-                    <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900">OTracker</h1>
-                    <p class="text-stone-500 font-medium">Hello, {{ currentUser?.email || currentUser?.phone }}. Welcome back to your fleet.</p>
+                    <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900 dark:text-white">OTracker</h1>
+                    <p class="text-stone-500 dark:text-stone-400 font-medium">Hello, {{ profileName || currentUser?.email || currentUser?.phone }}. Welcome back to your fleet.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <button @click="showCarModal = true" class="bg-stone-900 hover:bg-stone-800 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-stone-900/10">+ Add Vehicle</button>
+                    <button @click="showCarModal = true" class="bg-stone-900 dark:bg-white hover:bg-stone-800 dark:hover:bg-stone-200 text-white dark:text-stone-900 px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-stone-900/10">+ Add Vehicle</button>
                     <button @click="showDriverModal = true" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-indigo-500/10">+ Add Driver</button>
                     <button v-if="cars.length > 0" @click="showDocModal = true" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-amber-500/10">+ Add Document</button>
-                    <button @click="showProfileModal = true" class="bg-stone-200 hover:bg-stone-300 text-stone-700 px-6 py-3 rounded-xl font-bold transition">Settings</button>
-                    <button @click="logout" class="bg-stone-200 hover:bg-stone-300 text-stone-700 px-6 py-3 rounded-xl font-bold transition">Logout</button>
+                    <button @click="openProfileModal" class="bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 px-6 py-3 rounded-xl font-bold transition">Settings</button>
+                    <button @click="logout" class="bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 px-6 py-3 rounded-xl font-bold transition">Logout</button>
                 </div>
             </header>
 
             <div class="flex-1">
                 
+                <!-- METRICS SECTION -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
+                    <div class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none flex items-center justify-between transition-colors">
                         <div>
-                            <p class="text-stone-400 text-xs font-bold uppercase tracking-widest mb-1">Total Vehicles</p>
-                            <h3 class="text-4xl font-extrabold text-stone-900">{{ totalVehicles }}</h3>
+                            <p class="text-stone-400 dark:text-stone-500 text-xs font-bold uppercase tracking-widest mb-1">Total Vehicles</p>
+                            <h3 class="text-4xl font-extrabold text-stone-900 dark:text-white">{{ totalVehicles }}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-600">
+                        <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-stone-700 flex items-center justify-center text-stone-600 dark:text-stone-300">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
                         </div>
                     </div>
                     
-                    <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
+                    <div class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none flex items-center justify-between transition-colors">
                         <div>
-                            <p class="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-1">Active Credentials</p>
-                            <h3 class="text-4xl font-extrabold text-emerald-600">{{ activeCredentials }}</h3>
+                            <p class="text-emerald-500 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Active Credentials</p>
+                            <h3 class="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ activeCredentials }}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500 dark:text-emerald-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
+                    <div class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none flex items-center justify-between transition-colors">
                         <div>
-                            <p class="text-rose-500 text-xs font-bold uppercase tracking-widest mb-1">Action Needed</p>
-                            <h3 class="text-4xl font-extrabold text-rose-600">{{ actionNeeded }}</h3>
+                            <p class="text-rose-500 dark:text-rose-400 text-xs font-bold uppercase tracking-widest mb-1">Action Needed</p>
+                            <h3 class="text-4xl font-extrabold text-rose-600 dark:text-rose-400">{{ actionNeeded }}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-500 dark:text-rose-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex space-x-6 border-b border-stone-200/60 mb-8">
-                    <button @click="activeTab = 'fleet'" :class="{'border-stone-900 text-stone-900': activeTab === 'fleet', 'border-transparent text-stone-400 hover:text-stone-700': activeTab !== 'fleet'}" class="pb-4 font-bold border-b-2 transition duration-200">
+                <!-- TABS NAVIGATION -->
+                <div class="flex space-x-6 border-b border-stone-200/60 dark:border-stone-700 mb-8">
+                    <button @click="activeTab = 'fleet'" :class="{'border-stone-900 dark:border-white text-stone-900 dark:text-white': activeTab === 'fleet', 'border-transparent text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300': activeTab !== 'fleet'}" class="pb-4 font-bold border-b-2 transition duration-200">
                         Fleet Registry
                     </button>
-                    <button @click="activeTab = 'drivers'" :class="{'border-stone-900 text-stone-900': activeTab === 'drivers', 'border-transparent text-stone-400 hover:text-stone-700': activeTab !== 'drivers'}" class="pb-4 font-bold border-b-2 transition duration-200 flex items-center gap-2">
+                    <button @click="activeTab = 'drivers'" :class="{'border-stone-900 dark:border-white text-stone-900 dark:text-white': activeTab === 'drivers', 'border-transparent text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300': activeTab !== 'drivers'}" class="pb-4 font-bold border-b-2 transition duration-200 flex items-center gap-2">
                         Driver Management
-                        <span v-if="drivers.length > 0" class="bg-stone-100 text-stone-600 text-xs py-0.5 px-2 rounded-full">{{ drivers.length }}</span>
+                        <span v-if="drivers.length > 0" class="bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 text-xs py-0.5 px-2 rounded-full">{{ drivers.length }}</span>
                     </button>
                 </div>
 
+                <!-- TAB CONTENT: FLEET REGISTRY -->
                 <div v-if="activeTab === 'fleet'">
-                    <div v-if="cars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 mb-10">
+                    <div v-if="cars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 dark:border-stone-700 mb-10">
                         <div class="text-center">
-                            <h2 class="text-2xl font-bold text-stone-900 mb-2">No Vehicles Yet</h2>
-                            <p class="text-stone-500 mb-6">Your fleet registry is empty. Let's get started!</p>
-                            <button @click="showCarModal = true" class="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 shadow-xl">+ Add Your First Vehicle</button>
+                            <h2 class="text-2xl font-bold text-stone-900 dark:text-white mb-2">No Vehicles Yet</h2>
+                            <p class="text-stone-500 dark:text-stone-400 mb-6">Your fleet registry is empty. Let's get started!</p>
+                            <button @click="showCarModal = true" class="bg-stone-900 dark:bg-white text-white dark:text-stone-900 px-8 py-4 rounded-xl font-bold hover:bg-stone-800 dark:hover:bg-stone-200 shadow-xl">+ Add Your First Vehicle</button>
                         </div>
                     </div>
 
                     <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        <div v-for="car in cars" :key="car.id" class="bg-white rounded-3xl border border-stone-200/60 shadow-lg shadow-stone-200/20 overflow-hidden flex flex-col">
-                            <div class="bg-stone-900 p-8 text-white flex flex-col">
+                        <div v-for="car in cars" :key="car.id" class="bg-white dark:bg-stone-800 rounded-3xl border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none overflow-hidden flex flex-col transition-colors">
+                            <div class="bg-stone-900 dark:bg-black p-8 text-white flex flex-col">
                                 <div class="flex justify-between items-start mb-4">
                                     <div>
                                         <h2 class="text-2xl font-bold mb-1">{{ car.name }}</h2>
@@ -170,7 +177,7 @@
                             </div>
                             <div class="p-6 flex-1">
                                 <table class="w-full text-left">
-                                    <thead class="text-stone-400 text-xs uppercase tracking-widest font-bold border-b border-stone-100">
+                                    <thead class="text-stone-400 dark:text-stone-500 text-xs uppercase tracking-widest font-bold border-b border-stone-100 dark:border-stone-700/50">
                                         <tr>
                                             <th class="pb-3">Type</th>
                                             <th class="pb-3 text-right">Expires</th>
@@ -178,24 +185,24 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 last:border-0 group">
-                                            <td class="py-4 font-semibold text-stone-800">{{ doc.type }}</td>
-                                            <td class="py-4 text-right font-mono transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 font-bold animate-pulse' : 'text-stone-500'">
+                                        <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 dark:border-stone-700/50 last:border-0 group">
+                                            <td class="py-4 font-semibold text-stone-800 dark:text-stone-200">{{ doc.type }}</td>
+                                            <td class="py-4 text-right font-mono transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-stone-500 dark:text-stone-400'">
                                                 {{ doc.expiry_date }}
                                             </td>
                                             <td class="py-4 text-right pl-2">
-                                                <div class="flex justify-end gap-1">
-                                                    <button @click="openEditDoc(doc)" class="text-stone-300 hover:text-stone-600 transition duration-150 p-1 rounded" title="Edit Document">
+                                                <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button @click="openEditDoc(doc)" class="text-stone-300 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300 transition duration-150 p-1 rounded" title="Edit Document">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                                     </button>
-                                                    <button @click="deleteDoc(doc.id)" class="text-stone-300 hover:text-rose-500 transition duration-150 p-1 rounded" title="Delete Document">
+                                                    <button @click="deleteDoc(doc.id)" class="text-stone-300 dark:text-stone-500 hover:text-rose-500 dark:hover:text-rose-400 transition duration-150 p-1 rounded" title="Delete Document">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="getCarDocuments(car.id).length === 0">
-                                            <td colspan="3" class="py-8 text-center text-stone-400 italic text-sm">No documents attached.</td>
+                                            <td colspan="3" class="py-8 text-center text-stone-400 dark:text-stone-600 italic text-sm">No documents attached.</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -204,167 +211,212 @@
                     </div>
                 </div>
 
+                <!-- TAB CONTENT: DRIVERS ROSTER -->
                 <div v-if="activeTab === 'drivers'">
-                    <div v-if="drivers.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 mb-10">
+                    <div v-if="drivers.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 dark:border-stone-700 mb-10">
                         <div class="text-center">
-                            <h2 class="text-2xl font-bold text-stone-900 mb-2">No Drivers Yet</h2>
-                            <p class="text-stone-500 mb-6">Your driver roster is currently empty.</p>
+                            <h2 class="text-2xl font-bold text-stone-900 dark:text-white mb-2">No Drivers Yet</h2>
+                            <p class="text-stone-500 dark:text-stone-400 mb-6">Your driver roster is currently empty.</p>
                             <button @click="showDriverModal = true" class="bg-indigo-500 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-600 shadow-xl">+ Add A Driver</button>
                         </div>
                     </div>
 
                     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <div v-for="driver in drivers" :key="driver.id" class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 relative group">
+                        <div v-for="driver in drivers" :key="driver.id" class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none relative group transition-colors">
                             <div class="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <button @click="openEditDriver(driver)" class="text-stone-300 hover:text-indigo-500 p-1 rounded" title="Edit Driver">
+                                <button @click="openEditDriver(driver)" class="text-stone-300 dark:text-stone-500 hover:text-indigo-500 dark:hover:text-indigo-400 p-1 rounded" title="Edit Driver">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                 </button>
-                                <button @click="deleteDriver(driver.id)" class="text-stone-300 hover:text-rose-500 p-1 rounded" title="Delete Driver">
+                                <button @click="deleteDriver(driver.id)" class="text-stone-300 dark:text-stone-500 hover:text-rose-500 dark:hover:text-rose-400 p-1 rounded" title="Delete Driver">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
-                            <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500 dark:text-indigo-400 mb-4">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
                             </div>
-                            <h3 class="text-lg font-bold text-stone-900">{{ driver.name }}</h3>
-                            <p class="text-sm font-medium text-stone-500 mb-4">{{ driver.phone }}</p>
+                            <h3 class="text-lg font-bold text-stone-900 dark:text-white">{{ driver.name }}</h3>
+                            <p class="text-sm font-medium text-stone-500 dark:text-stone-400 mb-4">{{ driver.phone }}</p>
                             
-                            <div class="text-xs uppercase tracking-widest font-bold text-stone-400 mb-1">License Expiry</div>
-                            <div class="font-mono mb-4" :class="isExpiringSoon(driver.license_expiry) ? 'text-rose-600 font-bold animate-pulse' : 'text-stone-700'">
+                            <div class="text-xs uppercase tracking-widest font-bold text-stone-400 dark:text-stone-500 mb-1">License Expiry</div>
+                            <div class="font-mono mb-4" :class="isExpiringSoon(driver.license_expiry) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-stone-700 dark:text-stone-300'">
                                 {{ driver.license_expiry }}
                             </div>
 
-                            <div class="border-t border-stone-100 pt-3">
-                                <div class="text-xs uppercase tracking-widest font-bold text-stone-400 mb-2">Assigned Vehicles</div>
+                            <div class="border-t border-stone-100 dark:border-stone-700 pt-3">
+                                <div class="text-xs uppercase tracking-widest font-bold text-stone-400 dark:text-stone-500 mb-2">Assigned Vehicles</div>
                                 <div class="flex flex-wrap gap-2">
-                                    <span v-for="car in getCarsByDriver(driver.id)" :key="car.id" class="inline-block px-2 py-1 bg-stone-100 text-stone-600 rounded text-xs font-semibold">
+                                    <span v-for="car in getCarsByDriver(driver.id)" :key="car.id" class="inline-block px-2 py-1 bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 rounded text-xs font-semibold">
                                         {{ car.name }}
                                     </span>
-                                    <span v-if="getCarsByDriver(driver.id).length === 0" class="text-xs text-stone-400 italic">None assigned</span>
+                                    <span v-if="getCarsByDriver(driver.id).length === 0" class="text-xs text-stone-400 dark:text-stone-600 italic">None assigned</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- COMPANY FOOTER -->
+                <footer class="mt-12 pt-8 border-t border-stone-200/60 dark:border-stone-700/60 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="text-stone-500 dark:text-stone-400 text-sm font-medium">
+                        &copy; {{ new Date().getFullYear() }} OTracker Fleet Management. All rights reserved.
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <a :href="'mailto:' + contactHelpEmail" class="text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-bold transition">Contact Help</a>
+                        <span class="text-stone-300 dark:text-stone-600">|</span>
+                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.1.0</span>
+                    </div>
+                </footer>
             </div>
         </div>
 
-        <div v-if="showProfileModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full relative">
-                <button @click="showProfileModal = false" class="absolute top-4 right-4 text-stone-400 hover:text-stone-900 text-xl font-bold">&times;</button>
-                <h3 class="text-2xl font-bold mb-6 text-stone-900">Profile Settings</h3>
+        <!-- NEW PROFILE SETTINGS MODAL -->
+        <div v-if="showProfileModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-md w-full relative max-h-[90vh] overflow-y-auto">
+                <button @click="showProfileModal = false" class="absolute top-4 right-4 text-stone-400 hover:text-stone-900 dark:hover:text-white text-xl font-bold">&times;</button>
+                <h3 class="text-2xl font-bold mb-6 text-stone-900 dark:text-white">Profile Settings</h3>
                 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Account Identification</label>
-                        <input type="text" disabled :value="currentUser?.email || currentUser?.phone" class="w-full p-4 bg-stone-100 text-stone-500 rounded-2xl border border-stone-200 cursor-not-allowed">
+                    <!-- Theme Toggle -->
+                    <div class="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700">
+                        <div>
+                            <p class="font-bold text-sm text-stone-900 dark:text-white">Dark Mode</p>
+                            <p class="text-xs text-stone-500 dark:text-stone-400">Switch app appearance.</p>
+                        </div>
+                        <button @click="toggleTheme" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none" :class="isDarkMode ? 'bg-indigo-500' : 'bg-stone-300'">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" :class="isDarkMode ? 'translate-x-6' : 'translate-x-1'"></span>
+                        </button>
                     </div>
+
+                    <!-- Profile Name -->
                     <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">WhatsApp Number</label>
-                        <input type="text" v-model="profilePhone" placeholder="+2348000000000" class="w-full p-4 bg-stone-50 rounded-2xl border border-stone-200 outline-none focus:ring-2 focus:ring-stone-900">
-                        <p class="text-xs text-stone-400 mt-2 font-medium">Include country code for Twilio notifications.</p>
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Account Name</label>
+                        <input type="text" v-model="profileName" placeholder="Your Name or Company" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
                     </div>
-                    <button @click="updateProfile" class="w-full bg-stone-900 text-white p-4 rounded-2xl font-bold hover:bg-stone-800 transition">Save Preferences</button>
+                    
+                    <!-- Email Update -->
+                    <div>
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Email Address</label>
+                        <input type="email" v-model="profileEmail" placeholder="you@example.com" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
+                        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2 font-medium">Changing this will send a verification link to your inbox.</p>
+                    </div>
+
+                    <!-- WhatsApp Number -->
+                    <div>
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">WhatsApp Notifications</label>
+                        <input type="text" v-model="profilePhone" placeholder="+2348000000000" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
+                        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2 font-medium">Include country code for Twilio reminders.</p>
+                    </div>
+
+                    <!-- Support Link inside Settings -->
+                    <div class="flex items-center gap-2 pt-2 pb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-indigo-500"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
+                        <a :href="'mailto:' + contactHelpEmail" class="text-sm font-bold text-indigo-500 hover:text-indigo-600 transition">Contact Support Team</a>
+                    </div>
+
+                    <button @click="updateProfile" class="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 p-4 rounded-2xl font-bold hover:bg-stone-800 dark:hover:bg-stone-200 transition">Save Preferences</button>
                 </div>
 
-                <hr class="border-stone-200 my-6">
+                <hr class="border-stone-200 dark:border-stone-700 my-6">
 
-                <div class="p-4 bg-rose-50 border border-rose-100 rounded-2xl">
-                    <h3 class="text-rose-600 font-bold mb-2">Danger Zone</h3>
-                    <p class="text-xs text-rose-500/80 mb-4 font-medium">Permanently delete your account, vehicles, and documents. This cannot be undone.</p>
+                <div class="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 rounded-2xl">
+                    <h3 class="text-rose-600 dark:text-rose-400 font-bold mb-2">Danger Zone</h3>
+                    <p class="text-xs text-rose-500/80 dark:text-rose-400/80 mb-4 font-medium">Permanently delete your account, vehicles, and documents. This cannot be undone.</p>
                     <button @click="deleteAccount" class="w-full bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-xl font-bold transition text-sm">Delete Account</button>
                 </div>
             </div>
         </div>
 
-        <div v-if="showCarModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Add Vehicle</h3>
-                <input v-model="newCar.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <input v-model="newCar.plate" placeholder="Plate Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <select v-model="newCar.driver_id" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900">
+        <!-- ADD MODALS -->
+        <div v-if="showCarModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+                <h3 class="text-2xl font-bold mb-6 dark:text-white">Add Vehicle</h3>
+                <input v-model="newCar.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white" />
+                <input v-model="newCar.plate" placeholder="Plate Number" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white" />
+                <select v-model="newCar.driver_id" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white">
                     <option value="">Unassigned (No Driver)</option>
                     <option v-for="driver in drivers" :value="driver.id">{{ driver.name }}</option>
                 </select>
-                <button @click="submitCar" class="w-full bg-stone-900 text-white p-4 rounded-2xl font-bold hover:bg-stone-800 transition">Save Vehicle</button>
-                <button @click="showCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 transition">Cancel</button>
+                <button @click="submitCar" class="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 p-4 rounded-2xl font-bold hover:bg-stone-800 dark:hover:bg-stone-200 transition">Save Vehicle</button>
+                <button @click="showCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
-        <div v-if="showDocModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Add Document</h3>
-                <select v-model="newDoc.carId" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-amber-500">
+        <div v-if="showDocModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+                <h3 class="text-2xl font-bold mb-6 dark:text-white">Add Document</h3>
+                <select v-model="newDoc.carId" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white">
                     <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
                 </select>
-                <input v-model="newDoc.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-amber-500" />
-                <input type="date" v-model="newDoc.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-amber-500" />
+                <input v-model="newDoc.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                <input type="date" v-model="newDoc.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
                 <button @click="submitDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600 transition">Save Document</button>
-                <button @click="showDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 transition">Cancel</button>
+                <button @click="showDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
-        <div v-if="showDriverModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Add Driver</h3>
-                <input v-model="newDriver.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <input type="tel" v-model="newDriver.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
-                <input type="date" v-model="newDriver.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
+        <div v-if="showDriverModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+                <h3 class="text-2xl font-bold mb-6 dark:text-white">Add Driver</h3>
+                <input v-model="newDriver.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                <input type="tel" v-model="newDriver.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
+                <input type="date" v-model="newDriver.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
                 <button @click="submitDriver" class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold hover:bg-indigo-600 transition">Save Driver</button>
-                <button @click="showDriverModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 transition">Cancel</button>
+                <button @click="showDriverModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
-        <div v-if="showEditCarModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Edit Vehicle</h3>
-                <input v-model="editCarData.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <input v-model="editCarData.plate" placeholder="Plate Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5 ml-1">Assigned Driver</label>
-                <select v-model="editCarData.driver_id" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900">
+        <!-- EDIT MODALS -->
+        <div v-if="showEditCarModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+                <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Vehicle</h3>
+                <input v-model="editCarData.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white" />
+                <input v-model="editCarData.plate" placeholder="Plate Number" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white" />
+                <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1">Assigned Driver</label>
+                <select v-model="editCarData.driver_id" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white">
                     <option value="">Unassigned (No Driver)</option>
                     <option v-for="driver in drivers" :value="driver.id">{{ driver.name }}</option>
                 </select>
-                <button @click="updateCar" class="w-full bg-stone-900 text-white p-4 rounded-2xl font-bold hover:bg-stone-800 transition">Update Vehicle</button>
-                <button @click="showEditCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 transition">Cancel</button>
+                <button @click="updateCar" class="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 p-4 rounded-2xl font-bold hover:bg-stone-800 dark:hover:bg-stone-200 transition">Update Vehicle</button>
+                <button @click="showEditCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
-        <div v-if="showEditDocModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Edit Document</h3>
-                <input v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-amber-500" />
-                <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-amber-500" />
+        <div v-if="showEditDocModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+                <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Document</h3>
+                <input v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
                 <button @click="updateDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600 transition">Update Document</button>
-                <button @click="showEditDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 transition">Cancel</button>
+                <button @click="showEditDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
-        <div v-if="showEditDriverModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Edit Driver</h3>
-                <input v-model="editDriverData.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <input type="tel" v-model="editDriverData.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
-                <input type="date" v-model="editDriverData.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
+        <div v-if="showEditDriverModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+                <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Driver</h3>
+                <input v-model="editDriverData.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                <input type="tel" v-model="editDriverData.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
+                <input type="date" v-model="editDriverData.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
                 <button @click="updateDriver" class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold hover:bg-indigo-600 transition">Update Driver</button>
-                <button @click="showEditDriverModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 transition">Cancel</button>
+                <button @click="showEditDriverModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // 1. UPDATE YOUR BACKEND URL HERE
+        // 1. UPDATE YOUR URLS & CONTACT EMAIL HERE
         // ==========================================
         const RENDER_BACKEND_URL = 'https://otracker-e8xg.onrender.com';
+        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com'; // <-- Put your help email here
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const { createApp, ref, computed, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, watch } = Vue;
         
         createApp({
             setup() {
@@ -377,9 +429,11 @@
                 const authError = ref('');
                 const isSuccessMsg = ref(false);
                 const showPassword = ref(false);
+                const isDarkMode = ref(false);
                 
                 // Navigation
                 const activeTab = ref('fleet'); 
+                const contactHelpEmail = ref(CONTACT_HELP_EMAIL);
                 
                 // Data
                 const currentUser = ref({});
@@ -397,7 +451,10 @@
                 const showEditDriverModal = ref(false);
                 
                 // Forms
+                const profileName = ref('');
+                const profileEmail = ref('');
                 const profilePhone = ref('');
+                
                 const newCar = ref({ name: '', plate: '', driver_id: '' });
                 const newDoc = ref({ carId: '', type: '', expiry: '' });
                 const newDriver = ref({ name: '', phone: '', expiry: '' });
@@ -408,6 +465,31 @@
                 const isLoadingData = ref(false);
 
                 // ==========================================
+                // THEME ENGINE
+                // ==========================================
+                onMounted(() => {
+                    // Check if user previously selected dark mode
+                    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                        isDarkMode.value = true;
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        isDarkMode.value = false;
+                        document.documentElement.classList.remove('dark');
+                    }
+                });
+
+                const toggleTheme = () => {
+                    isDarkMode.value = !isDarkMode.value;
+                    if (isDarkMode.value) {
+                        document.documentElement.classList.add('dark');
+                        localStorage.theme = 'dark';
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                        localStorage.theme = 'light';
+                    }
+                };
+
+                // ==========================================
                 // SUPABASE AUTH LISTENER
                 // ==========================================
                 supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -415,7 +497,6 @@
                         currentUser.value = session.user;
                         isLoggedIn.value = true;
                         fetchFleet();
-                        loadProfileData();
                     } else {
                         currentUser.value = {};
                         isLoggedIn.value = false;
@@ -475,14 +556,9 @@
                     if (isEmail) {
                         credentials = { email: identifier, password: authPassword.value };
                     } else {
-                        // Clean phone number
                         let phone = identifier.replace(/[^0-9+]/g, '');
-                        // Auto-format for Nigerian numbers if they forgot the country code
-                        if (phone.startsWith('0')) {
-                            phone = '+234' + phone.substring(1);
-                        } else if (!phone.startsWith('+')) {
-                            phone = '+' + phone;
-                        }
+                        if (phone.startsWith('0')) phone = '+234' + phone.substring(1);
+                        else if (!phone.startsWith('+')) phone = '+' + phone;
                         credentials = { phone: phone, password: authPassword.value };
                     }
 
@@ -491,9 +567,8 @@
                         if (error) authError.value = error.message;
                     } else {
                         const { error } = await supabaseClient.auth.signUp(credentials);
-                        if (error) {
-                            authError.value = error.message;
-                        } else { 
+                        if (error) authError.value = error.message;
+                        else { 
                             authError.value = "Registration successful! You may now log in."; 
                             isSuccessMsg.value = true;
                             isLoginMode.value = true; 
@@ -506,21 +581,46 @@
                     await supabaseClient.auth.signOut();
                 };
 
-                const loadProfileData = async () => {
+                const openProfileModal = async () => {
                     if (!currentUser.value.id) return;
+                    
+                    // Pre-fill Name & Email from Supabase Auth MetaData
+                    profileName.value = currentUser.value.user_metadata?.full_name || '';
+                    profileEmail.value = currentUser.value.email || '';
+
+                    // Fetch WhatsApp from Profiles Table
                     const { data, error } = await supabaseClient.from('profiles').select('whatsapp_number').eq('id', currentUser.value.id).single();
                     if (data && data.whatsapp_number) {
                         profilePhone.value = data.whatsapp_number;
                     }
+                    showProfileModal.value = true;
                 };
 
                 const updateProfile = async () => {
-                    const { error } = await supabaseClient.from('profiles').update({ whatsapp_number: profilePhone.value }).eq('id', currentUser.value.id);
-                    if (error) {
-                        alert("Error saving profile: " + error.message);
-                    } else {
-                        alert("Preferences saved successfully!");
+                    try {
+                        // 1. Update Name in secure Auth metadata
+                        const authUpdates = { data: { full_name: profileName.value } };
+                        
+                        // 2. Only submit email update if it actually changed
+                        if (profileEmail.value && profileEmail.value !== currentUser.value.email) {
+                            authUpdates.email = profileEmail.value;
+                        }
+
+                        const { error: authError } = await supabaseClient.auth.updateUser(authUpdates);
+                        if (authError) throw authError;
+
+                        // 3. Update WhatsApp number in the Database table
+                        const { error: dbError } = await supabaseClient.from('profiles').update({ whatsapp_number: profilePhone.value }).eq('id', currentUser.value.id);
+                        if (dbError) throw dbError;
+
+                        alert("Profile updated successfully! (If you changed your email, Supabase sent a verification link to your inbox).");
+                        
+                        // Refresh the local reactive variable immediately
+                        currentUser.value.user_metadata = { ...currentUser.value.user_metadata, full_name: profileName.value };
+                        
                         showProfileModal.value = false;
+                    } catch (error) {
+                        alert("Error saving profile: " + error.message);
                     }
                 };
 
@@ -554,6 +654,13 @@
                     if (!currentUser.value.id) return;
                     isLoadingData.value = true;
                     
+                    // Also refresh auth user data just in case it was updated
+                    const { data: { user } } = await supabaseClient.auth.getUser();
+                    if(user) {
+                        currentUser.value = user;
+                        profileName.value = user.user_metadata?.full_name || '';
+                    }
+
                     const { data: dr } = await supabaseClient.from('drivers').select('*').eq('owner_id', currentUser.value.id);
                     drivers.value = dr || [];
 
@@ -674,10 +781,10 @@
                     submitCar, submitDoc, submitDriver, 
                     updateCar, updateDoc, updateDriver, 
                     deleteCar, deleteDoc, deleteDriver, 
-                    openEditCar, openEditDoc, openEditDriver,
-                    updateProfile, deleteAccount,
+                    openEditCar, openEditDoc, openEditDriver, openProfileModal,
+                    updateProfile, deleteAccount, toggleTheme, isDarkMode, contactHelpEmail,
                     newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
-                    authIdentifier, authPassword, authError, isSuccessMsg, profilePhone, currentUser, toggleAuthMode, isLoadingData,
+                    authIdentifier, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, currentUser, toggleAuthMode, isLoadingData,
                     totalVehicles, activeCredentials, actionNeeded, isExpiringSoon, showPassword
                 };
             }
