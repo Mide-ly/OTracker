@@ -8,8 +8,13 @@ const nodemailer = require('nodemailer');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Initialize Supabase & Twilio
+// Middleware to parse incoming JSON requests (Crucial for the delete-account route)
+app.use(express.json());
+
+// Initialize Supabase (Using Service Role Key to bypass RLS for admin tasks)
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+// Initialize Twilio
 const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // Initialize Email Transporter
@@ -21,7 +26,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Schedule task to run every day at 8:00 AM
+// Schedule task to run every day at 8:00 AM UTC
 cron.schedule('0 8 * * *', async () => {
     console.log('Running daily expiry check...');
 
@@ -35,10 +40,10 @@ cron.schedule('0 8 * * *', async () => {
     const todayStr = addDays(0);
     const nextMonthStr = addDays(30);
 
-    // Fetch documents expiring today or in exactly 30 days
+    // Fetch documents, the vehicle they belong to, and the owner's profile
     const { data: documents, error } = await supabase
         .from('documents')
-        .select(`*, vehicles(make, model, license_plate, user_id)`)
+        .select(`*, vehicles(*, profiles(email, whatsapp_number))`)
         .or(`expiry_date.eq.${todayStr},expiry_date.eq.${nextMonthStr}`);
 
     if (error) {
@@ -52,45 +57,98 @@ cron.schedule('0 8 * * *', async () => {
     }
 
     for (const doc of documents) {
-        // In a real app, you would fetch the user's phone/email from a users table.
-        // For testing, we send to your verified Twilio number and your email.
-        const vehicleName = `${doc.vehicles.make} ${doc.vehicles.model} (${doc.vehicles.license_plate})`;
+        // Dynamically grab the specific user's contact details from the database
+        const userEmail = doc.vehicles?.profiles?.email;
+        const userPhone = doc.vehicles?.profiles?.whatsapp_number;
+        const vehicleName = `${doc.vehicles?.make} ${doc.vehicles?.model} (${doc.vehicles?.license_plate})`;
         const messageText = `⚠️ OTracker Alert: The ${doc.document_type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
 
-        // 1. Send WhatsApp
-        try {
-            await twilioClient.messages.create({
-                body: messageText,
-                from: 'whatsapp:+14155238886', // Replace with your Twilio Sandbox number
-                to: 'whatsapp:+2348000000000'   // Replace with your verified WhatsApp number
-            });
-            console.log(`WhatsApp sent for ${vehicleName}`);
-        } catch (twError) {
-            console.error("WhatsApp Error:", twError.message);
+        // 1. Send WhatsApp dynamically (Only if the user provided a number)
+        if (userPhone && userPhone.trim() !== '') {
+            try {
+                await twilioClient.messages.create({
+                    body: messageText,
+                    from: 'whatsapp:+14155238886', // Replace with your Twilio Sandbox number if different
+                    to: `whatsapp:${userPhone}` 
+                });
+                console.log(`WhatsApp sent to ${userPhone} for ${vehicleName}`);
+            } catch (twError) {
+                console.error(`WhatsApp Error for ${userPhone}:`, twError.message);
+            }
+        } else {
+            console.log(`Skipped WhatsApp for ${vehicleName} (No number on profile)`);
         }
 
-        // 2. Send Email
-        try {
-            await transporter.sendMail({
-                from: `"OTracker Alerts" <${process.env.EMAIL_USER}>`,
-                to: process.env.EMAIL_USER, // Sending to yourself for testing
-                subject: `Document Expiry Alert: ${vehicleName}`,
-                text: messageText,
-            });
-            console.log(`Email sent for ${vehicleName}`);
-        } catch (emailError) {
-            console.error("Email Error:", emailError.message);
+        // 2. Send Email dynamically (Only if the user has an email)
+        if (userEmail) {
+            try {
+                await transporter.sendMail({
+                    from: `"OTracker Alerts" <${process.env.EMAIL_USER}>`,
+                    to: userEmail,
+                    subject: `Document Expiry Alert: ${vehicleName}`,
+                    text: messageText,
+                });
+                console.log(`Email sent to ${userEmail} for ${vehicleName}`);
+            } catch (emailError) {
+                console.error(`Email Error for ${userEmail}:`, emailError.message);
+            }
         }
     }
 });
 
-// A manual trigger so you don't have to wait until 8 AM to test!
-app.get('/api/test-reminders', (req, res) => {
-    console.log("Manual trigger hit! Check terminal for logs.");
-    res.send("Triggered manual check. Check your phone and email in a few seconds!");
-    // You can temporarily copy the logic from inside the cron job here to test instantly.
+// Secure Account Deletion Endpoint
+app.post('/api/delete-account', async (req, res) => {
+    const { userId } = req.body;
+
+    if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+    }
+
+    // Uses the Admin Service Key to completely obliterate the auth user
+    // Due to the "on delete cascade" rule in SQL, this also wipes their profiles, cars, and documents.
+    const { data, error } = await supabase.auth.admin.deleteUser(userId);
+
+    if (error) {
+        console.error("Delete User Error:", error.message);
+        return res.status(500).json({ error: error.message });
+    }
+
+    console.log(`Successfully deleted user account: ${userId}`);
+    res.json({ message: "Account completely deleted." });
+});
+
+// Manual Trigger Endpoint for testing
+app.get('/api/test-reminders', async (req, res) => {
+    console.log("Manual trigger hit! Forcing an alert right now...");
+
+    // Sending a test WhatsApp
+    try {
+        await twilioClient.messages.create({
+            body: "⚠️ OTracker TEST: This is a manual test to confirm your backend is working!",
+            from: 'whatsapp:+14155238886', // Keep your Twilio Sandbox number here
+            to: 'whatsapp:+2348000000000'   // REPLACE WITH YOUR ACTUAL NUMBER FOR TESTING
+        });
+        console.log("Test WhatsApp sent!");
+    } catch (error) {
+        console.error("WhatsApp Error:", error.message);
+    }
+
+    // Sending a test Email
+    try {
+        await transporter.sendMail({
+            from: `"OTracker Alerts" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_USER, // Sends to yourself for the test
+            subject: `OTracker: Manual Backend Test`,
+            text: "Success! Your Node.js server successfully sent this email via Render.",
+        });
+        console.log("Test Email sent!");
+    } catch (error) {
+        console.error("Email Error:", error.message);
+    }
+
+    res.send("<h1>Test fired!</h1><p>Check your WhatsApp and Email.</p>");
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`OTracker Multi-User Backend is running on port ${port}`);
 });

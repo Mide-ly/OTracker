@@ -3,557 +3,331 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTracker | Fleet Management</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>OTracker | Document Expiry Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .bg-pattern { background-color: #fafaf9; background-image: radial-gradient(#e7e5e4 1px, transparent 1px); background-size: 24px 24px; }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        [v-cloak] { display: none; }
+        body {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            color: white;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .input-glass {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .input-glass:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(0, 0, 0, 0.4);
+        }
     </style>
 </head>
-<body class="bg-pattern text-stone-900 min-h-screen font-sans antialiased">
+<body class="p-4 md:p-8">
 
-    <div id="app" v-cloak class="w-full min-h-screen flex flex-col">
-        
-        <!-- AUTHENTICATION SCREEN -->
-        <div v-if="!isLoggedIn" class="flex-1 flex items-center justify-center p-4 sm:p-6">
-            <div class="glass w-full max-w-md p-8 sm:p-10 rounded-3xl shadow-2xl shadow-stone-200/50 border border-stone-200/60 relative">
-                <div class="text-center mb-8">
-                    <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900 mb-2">OTracker</h1>
-                    <p class="text-stone-500 font-medium">{{ isLoginMode ? 'Login to your fleet vault.' : 'Create your secure OTracker account.' }}</p>
-                </div>
-                
-                <div class="space-y-4">
-                    <div v-if="!isLoginMode">
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Full Name</label>
-                        <input type="text" v-model="authName" class="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none transition" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Phone Number</label>
-                        <div class="flex">
-                            <select v-model="selectedCountryCode" class="px-3 py-3.5 bg-stone-50 border border-stone-200 border-r-0 rounded-l-xl outline-none text-sm font-medium">
-                                <option value="+234">🇳🇬 +234</option><option value="+233">🇬🇭 +233</option><option value="+27">🇿🇦 +27</option>
-                                <option value="+254">🇰🇪 +254</option><option value="+44">🇬🇧 +44</option><option value="+1">🇺🇸 +1</option>
-                            </select>
-                            <input type="tel" v-model="localPhoneNumber" class="flex-1 px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-r-xl focus:ring-2 focus:ring-stone-900 outline-none" placeholder="801 234 5678" />
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Password</label>
-                        <input type="password" v-model="authPassword" class="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none" />
-                    </div>
-                </div>
+    <div id="auth-section" class="max-w-md mx-auto mt-20 glass-panel p-8">
+        <h1 class="text-3xl font-bold mb-6 text-center tracking-wider">OTracker</h1>
+        <div class="space-y-4">
+            <input type="email" id="auth-email" placeholder="Email Address" class="w-full p-3 rounded input-glass">
+            <input type="password" id="auth-password" placeholder="Password" class="w-full p-3 rounded input-glass">
+            <div class="flex gap-4 mt-6">
+                <button onclick="login()" class="flex-1 bg-blue-600 hover:bg-blue-700 p-3 rounded font-semibold transition">Log In</button>
+                <button onclick="register()" class="flex-1 bg-gray-600 hover:bg-gray-700 p-3 rounded font-semibold transition">Register</button>
+            </div>
+            <p id="auth-msg" class="text-sm text-center text-red-400 mt-2 hidden"></p>
+        </div>
+    </div>
 
-                <div v-if="authError" class="mt-4 p-3 bg-rose-50 text-rose-600 text-xs rounded-xl text-center font-medium">{{ authError }}</div>
-                
-                <button @click="handleAuth" :disabled="isLoading" class="w-full mt-8 bg-stone-900 hover:bg-stone-800 text-white py-4 rounded-xl font-bold transition shadow-lg shadow-stone-900/20 active:scale-[0.98]">
-                    {{ isLoading ? 'Processing...' : (isLoginMode ? 'Access Vault' : 'Create Account') }}
-                </button>
-                
-                <button @click="toggleAuthMode" class="w-full mt-4 text-stone-400 hover:text-stone-900 text-sm font-medium transition">
-                    {{ isLoginMode ? 'Need an account? Register.' : 'Already have one? Login.' }}
-                </button>
+    <div id="dashboard-section" class="max-w-6xl mx-auto hidden">
+        <div class="flex justify-between items-center mb-8 glass-panel p-4">
+            <h1 class="text-2xl font-bold">OTracker Dashboard</h1>
+            <div class="space-x-4">
+                <button onclick="toggleProfileModal()" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded transition">Profile Settings</button>
+                <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">Log Out</button>
             </div>
         </div>
 
-        <!-- MAIN DASHBOARD -->
-        <div v-else class="flex-1 flex flex-col w-full h-full p-4 sm:p-8">
-            <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="glass-panel p-6">
+                <h2 class="text-xl font-semibold mb-4 text-blue-300">Add New Vehicle</h2>
+                <div class="space-y-3">
+                    <input type="text" id="veh-make" placeholder="Make (e.g. Toyota)" class="w-full p-2 rounded input-glass">
+                    <input type="text" id="veh-model" placeholder="Model (e.g. Camry)" class="w-full p-2 rounded input-glass">
+                    <input type="text" id="veh-plate" placeholder="License Plate" class="w-full p-2 rounded input-glass">
+                    <button onclick="addVehicle()" class="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded mt-2 transition">Save Vehicle</button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6">
+                <h2 class="text-xl font-semibold mb-4 text-green-300">Add Document Expiry</h2>
+                <div class="space-y-3">
+                    <select id="doc-vehicle-select" class="w-full p-2 rounded input-glass bg-gray-800 text-white">
+                        <option value="">-- Select Vehicle --</option>
+                    </select>
+                    <input type="text" id="doc-type" placeholder="Document (e.g. Insurance, License)" class="w-full p-2 rounded input-glass">
+                    <input type="date" id="doc-expiry" class="w-full p-2 rounded input-glass">
+                    <button onclick="addDocument()" class="w-full bg-green-600 hover:bg-green-700 p-2 rounded mt-2 transition">Set Reminder</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-8 glass-panel p-6">
+            <h2 class="text-xl font-semibold mb-4">Your Active Reminders</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-gray-600">
+                            <th class="p-2">Vehicle</th>
+                            <th class="p-2">Plate</th>
+                            <th class="p-2">Document</th>
+                            <th class="p-2">Expiry Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center hidden z-50">
+        <div class="glass-panel p-8 max-w-md w-full relative">
+            <button onclick="toggleProfileModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-indigo-300">Profile Settings</h2>
+            
+            <div class="space-y-4">
                 <div>
-                    <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900">OTracker</h1>
-                    <p class="text-stone-500 font-medium">Hello, {{ currentUser.name }}. Welcome back to your fleet.</p>
+                    <label class="block text-sm text-gray-300 mb-1">Account Email</label>
+                    <input type="email" id="profile-email" disabled class="w-full p-2 rounded bg-gray-800 border border-gray-600 text-gray-400 cursor-not-allowed">
                 </div>
-                <div class="flex flex-wrap gap-3">
-                    <button @click="showCarModal = true" class="bg-stone-900 hover:bg-stone-800 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-stone-900/10">+ Add Vehicle</button>
-                    <button @click="showDriverModal = true" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-indigo-500/10">+ Add Driver</button>
-                    <button v-if="cars.length > 0" @click="showDocModal = true" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-amber-500/10">+ Add Document</button>
-                    <button @click="logout" class="bg-stone-200 hover:bg-stone-300 text-stone-700 px-6 py-3 rounded-xl font-bold transition">Logout</button>
+                <div>
+                    <label class="block text-sm text-gray-300 mb-1">WhatsApp Notification Number</label>
+                    <input type="text" id="profile-whatsapp" placeholder="e.g. +2348000000000" class="w-full p-2 rounded input-glass">
+                    <p class="text-xs text-gray-400 mt-1">Include country code. Twilio opt-in required.</p>
                 </div>
-            </header>
-
-            <div class="flex-1">
-                
-                <!-- METRICS SECTION (Always visible) -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
-                        <div>
-                            <p class="text-stone-400 text-xs font-bold uppercase tracking-widest mb-1">Total Vehicles</p>
-                            <h3 class="text-4xl font-extrabold text-stone-900">{{ totalVehicles }}</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
-                        <div>
-                            <p class="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-1">Active Credentials</p>
-                            <h3 class="text-4xl font-extrabold text-emerald-600">{{ activeCredentials }}</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 flex items-center justify-between">
-                        <div>
-                            <p class="text-rose-500 text-xs font-bold uppercase tracking-widest mb-1">Action Needed</p>
-                            <h3 class="text-4xl font-extrabold text-rose-600">{{ actionNeeded }}</h3>
-                        </div>
-                        <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TABS NAVIGATION -->
-                <div class="flex space-x-6 border-b border-stone-200/60 mb-8">
-                    <button @click="activeTab = 'fleet'" :class="{'border-stone-900 text-stone-900': activeTab === 'fleet', 'border-transparent text-stone-400 hover:text-stone-700': activeTab !== 'fleet'}" class="pb-4 font-bold border-b-2 transition duration-200">
-                        Fleet Registry
-                    </button>
-                    <button @click="activeTab = 'drivers'" :class="{'border-stone-900 text-stone-900': activeTab === 'drivers', 'border-transparent text-stone-400 hover:text-stone-700': activeTab !== 'drivers'}" class="pb-4 font-bold border-b-2 transition duration-200 flex items-center gap-2">
-                        Driver Management
-                        <span v-if="drivers.length > 0" class="bg-stone-100 text-stone-600 text-xs py-0.5 px-2 rounded-full">{{ drivers.length }}</span>
-                    </button>
-                </div>
-
-                <!-- TAB CONTENT: FLEET REGISTRY -->
-                <div v-if="activeTab === 'fleet'">
-                    <div v-if="cars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 mb-10">
-                        <div class="text-center">
-                            <h2 class="text-2xl font-bold text-stone-900 mb-2">No Vehicles Yet</h2>
-                            <p class="text-stone-500 mb-6">Your fleet registry is empty. Let's get started!</p>
-                            <button @click="showCarModal = true" class="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 shadow-xl">+ Add Your First Vehicle</button>
-                        </div>
-                    </div>
-
-                    <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        <div v-for="car in cars" :key="car.id" class="bg-white rounded-3xl border border-stone-200/60 shadow-lg shadow-stone-200/20 overflow-hidden flex flex-col">
-                            <div class="bg-stone-900 p-8 text-white flex flex-col">
-                                <div class="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h2 class="text-2xl font-bold mb-1">{{ car.name }}</h2>
-                                        <span class="inline-block px-3 py-1 bg-white/10 rounded-lg text-xs font-mono font-bold tracking-widest uppercase border border-white/10">{{ car.plate_number }}</span>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button @click="openEditCar(car)" class="text-stone-400 hover:text-white p-1.5 rounded-lg transition duration-200" title="Edit Vehicle (Assign Driver)">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
-                                        </button>
-                                        <button @click="deleteCar(car.id)" class="text-stone-400 hover:text-rose-400 p-1.5 rounded-lg transition duration-200" title="Delete Vehicle">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div class="pt-4 border-t border-white/10 flex justify-between items-center bg-white/5 rounded-xl p-3">
-                                    <div v-if="car.driver_id && getDriver(car.driver_id)" class="w-full flex justify-between items-center">
-                                        <div class="flex items-center gap-2">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-stone-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                                            <span class="text-sm font-semibold">{{ getDriver(car.driver_id).name }}</span>
-                                        </div>
-                                        <span class="text-xs font-mono" :class="isExpiringSoon(getDriver(car.driver_id).license_expiry) ? 'text-rose-400 font-bold animate-pulse' : 'text-stone-400'">
-                                            Lic: {{ getDriver(car.driver_id).license_expiry }}
-                                        </span>
-                                    </div>
-                                    <div v-else class="text-xs text-stone-500 italic w-full flex justify-between items-center">
-                                        <span>No driver assigned</span>
-                                        <button @click="openEditCar(car)" class="text-white/60 hover:text-white underline font-semibold transition">Assign</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="p-6 flex-1">
-                                <table class="w-full text-left">
-                                    <thead class="text-stone-400 text-xs uppercase tracking-widest font-bold border-b border-stone-100">
-                                        <tr>
-                                            <th class="pb-3">Type</th>
-                                            <th class="pb-3 text-right">Expires</th>
-                                            <th class="pb-3 w-16"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 last:border-0 group">
-                                            <td class="py-4 font-semibold text-stone-800">{{ doc.type }}</td>
-                                            <td class="py-4 text-right font-mono transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 font-bold animate-pulse' : 'text-stone-500'">
-                                                {{ doc.expiry_date }}
-                                            </td>
-                                            <td class="py-4 text-right pl-2">
-                                                <div class="flex justify-end gap-1">
-                                                    <button @click="openEditDoc(doc)" class="text-stone-300 hover:text-stone-600 transition duration-150 p-1 rounded" title="Edit Document">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
-                                                    </button>
-                                                    <button @click="deleteDoc(doc.id)" class="text-stone-300 hover:text-rose-500 transition duration-150 p-1 rounded" title="Delete Document">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="getCarDocuments(car.id).length === 0">
-                                            <td colspan="3" class="py-8 text-center text-stone-400 italic text-sm">No documents attached.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB CONTENT: DRIVERS ROSTER -->
-                <div v-if="activeTab === 'drivers'">
-                    <div v-if="drivers.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 mb-10">
-                        <div class="text-center">
-                            <h2 class="text-2xl font-bold text-stone-900 mb-2">No Drivers Yet</h2>
-                            <p class="text-stone-500 mb-6">Your driver roster is currently empty.</p>
-                            <button @click="showDriverModal = true" class="bg-indigo-500 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-600 shadow-xl">+ Add A Driver</button>
-                        </div>
-                    </div>
-
-                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <div v-for="driver in drivers" :key="driver.id" class="bg-white rounded-3xl p-6 border border-stone-200/60 shadow-lg shadow-stone-200/20 relative group">
-                            <div class="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                <button @click="openEditDriver(driver)" class="text-stone-300 hover:text-indigo-500 p-1 rounded" title="Edit Driver">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
-                                </button>
-                                <button @click="deleteDriver(driver.id)" class="text-stone-300 hover:text-rose-500 p-1 rounded" title="Delete Driver">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                            <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                            </div>
-                            <h3 class="text-lg font-bold text-stone-900">{{ driver.name }}</h3>
-                            <p class="text-sm font-medium text-stone-500 mb-4">{{ driver.phone }}</p>
-                            
-                            <div class="text-xs uppercase tracking-widest font-bold text-stone-400 mb-1">License Expiry</div>
-                            <div class="font-mono mb-4" :class="isExpiringSoon(driver.license_expiry) ? 'text-rose-600 font-bold animate-pulse' : 'text-stone-700'">
-                                {{ driver.license_expiry }}
-                            </div>
-
-                            <div class="border-t border-stone-100 pt-3">
-                                <div class="text-xs uppercase tracking-widest font-bold text-stone-400 mb-2">Assigned Vehicles</div>
-                                <div class="flex flex-wrap gap-2">
-                                    <span v-for="car in getCarsByDriver(driver.id)" :key="car.id" class="inline-block px-2 py-1 bg-stone-100 text-stone-600 rounded text-xs font-semibold">
-                                        {{ car.name }}
-                                    </span>
-                                    <span v-if="getCarsByDriver(driver.id).length === 0" class="text-xs text-stone-400 italic">None assigned</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button onclick="updateProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 p-2 rounded transition">Save Preferences</button>
             </div>
-        </div>
 
-        <!-- ADD MODALS -->
-        <div v-if="showCarModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Add Vehicle</h3>
-                <input v-model="newCar.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <input v-model="newCar.plate" placeholder="Plate Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <select v-model="newCar.driver_id" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900">
-                    <option value="">Unassigned (No Driver)</option>
-                    <option v-for="driver in drivers" :value="driver.id">{{ driver.name }}</option>
-                </select>
-                <button @click="submitCar" class="w-full bg-stone-900 text-white p-4 rounded-2xl font-bold hover:bg-stone-800">Save Vehicle</button>
-                <button @click="showCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
+            <hr class="border-gray-600 my-6">
 
-        <div v-if="showDocModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Add Document</h3>
-                <select v-model="newDoc.carId" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100">
-                    <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
-                </select>
-                <input v-model="newDoc.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100" />
-                <input type="date" v-model="newDoc.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100" />
-                <button @click="submitDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600">Save Document</button>
-                <button @click="showDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
-
-        <div v-if="showDriverModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Add Driver</h3>
-                <input v-model="newDriver.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <input type="tel" v-model="newDriver.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
-                <input type="date" v-model="newDriver.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <button @click="submitDriver" class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold hover:bg-indigo-600">Save Driver</button>
-                <button @click="showDriverModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
-
-        <!-- EDIT MODALS -->
-        <div v-if="showEditCarModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Edit Vehicle</h3>
-                <input v-model="editCarData.name" placeholder="Vehicle Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <input v-model="editCarData.plate" placeholder="Plate Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900" />
-                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5 ml-1">Assigned Driver</label>
-                <select v-model="editCarData.driver_id" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-stone-900">
-                    <option value="">Unassigned (No Driver)</option>
-                    <option v-for="driver in drivers" :value="driver.id">{{ driver.name }}</option>
-                </select>
-                <button @click="updateCar" class="w-full bg-stone-900 text-white p-4 rounded-2xl font-bold hover:bg-stone-800">Update Vehicle</button>
-                <button @click="showEditCarModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
-
-        <div v-if="showEditDocModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Edit Document</h3>
-                <input v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100" />
-                <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100" />
-                <button @click="updateDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600">Update Document</button>
-                <button @click="showEditDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
-            </div>
-        </div>
-
-        <div v-if="showEditDriverModal" class="fixed inset-0 bg-stone-900/20 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full">
-                <h3 class="text-2xl font-bold mb-6">Edit Driver</h3>
-                <input v-model="editDriverData.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <input type="tel" v-model="editDriverData.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
-                <input type="date" v-model="editDriverData.expiry" class="w-full p-4 mb-6 bg-stone-50 rounded-2xl border border-stone-100 outline-none focus:ring-2 focus:ring-indigo-500" />
-                <button @click="updateDriver" class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold hover:bg-indigo-600">Update Driver</button>
-                <button @click="showEditDriverModal = false" class="w-full mt-3 text-stone-400 text-sm font-semibold">Cancel</button>
+            <div class="p-4 border border-red-900 bg-red-900 bg-opacity-20 rounded-lg">
+                <h3 class="text-red-400 font-bold mb-2">Danger Zone</h3>
+                <p class="text-xs text-gray-400 mb-4">Permanently delete your account, vehicles, and documents. This cannot be undone.</p>
+                <button onclick="deleteAccount()" class="w-full bg-red-600 hover:bg-red-700 p-2 rounded transition text-sm">Permanently Delete Account</button>
             </div>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // 1. UPDATE THESE THREE CONSTANTS
+        // ==========================================
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const { createApp, ref, computed } = Vue;
+        const RENDER_BACKEND_URL = 'https://otracker-e8xg.onrender.com';
         
-        createApp({
-            setup() {
-                const isLoggedIn = ref(false);
-                const isLoginMode = ref(true);
-                const isLoading = ref(false);
-                const selectedCountryCode = ref('+234');
-                const localPhoneNumber = ref('');
-                const authPassword = ref('');
-                const authName = ref('');
-                const authError = ref('');
-                
-                const activeTab = ref('fleet'); // Manages the UI toggle between Fleet and Drivers
-                
-                const currentUser = ref({});
-                const cars = ref([]);
-                const documents = ref([]);
-                const drivers = ref([]);
-                
-                // Modal refs
-                const showCarModal = ref(false);
-                const showDocModal = ref(false);
-                const showDriverModal = ref(false);
-                const showEditCarModal = ref(false);
-                const showEditDocModal = ref(false);
-                const showEditDriverModal = ref(false);
-                
-                // Form data refs
-                const newCar = ref({ name: '', plate: '', driver_id: '' });
-                const newDoc = ref({ carId: '', type: '', expiry: '' });
-                const newDriver = ref({ name: '', phone: '', expiry: '' });
-                
-                const editCarData = ref({ id: '', name: '', plate: '', driver_id: '' });
-                const editDocData = ref({ id: '', type: '', expiry: '' });
-                const editDriverData = ref({ id: '', name: '', phone: '', expiry: '' });
-                
-                const isLoadingData = ref(false);
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
 
-                const isExpiringSoon = (expiryDateStr) => {
-                    if (!expiryDateStr) return false;
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const expiryDate = new Date(expiryDateStr);
-                    const diffTime = expiryDate - today;
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    return diffDays <= 30;
-                };
-
-                const getDriver = (driverId) => drivers.value.find(d => d.id === driverId);
-                const getCarsByDriver = (driverId) => cars.value.filter(c => c.driver_id === driverId);
-
-                // --- METRICS ---
-                const totalVehicles = computed(() => cars.value.length);
-                
-                const activeCredentials = computed(() => {
-                    const docsSafe = documents.value.filter(doc => !isExpiringSoon(doc.expiry_date)).length;
-                    const licensesSafe = drivers.value.filter(d => !isExpiringSoon(d.license_expiry)).length;
-                    return docsSafe + licensesSafe;
-                });
-                
-                const actionNeeded = computed(() => {
-                    const docsExpiring = documents.value.filter(doc => isExpiringSoon(doc.expiry_date)).length;
-                    const licensesExpiring = drivers.value.filter(d => isExpiringSoon(d.license_expiry)).length;
-                    return docsExpiring + licensesExpiring;
-                });
-
-                const toggleAuthMode = () => { isLoginMode.value = !isLoginMode.value; authError.value = ''; };
-
-                const handleAuth = async () => {
-                    isLoading.value = true;
-                    authError.value = '';
-                    let cleanPhone = localPhoneNumber.value.replace(/^0+/, '');
-                    let fullPhoneNumber = `${selectedCountryCode.value}${cleanPhone}`;
-
-                    if (isLoginMode.value) {
-                        const { data, error } = await supabaseClient.from('users').select('*').eq('phone_number', fullPhoneNumber).eq('password', authPassword.value).single();
-                        if (error) authError.value = "Invalid credentials"; else { currentUser.value = data; isLoggedIn.value = true; fetchFleet(); }
-                    } else {
-                        const { data, error } = await supabaseClient.from('users').insert([{ name: authName.value, phone_number: fullPhoneNumber, password: authPassword.value }]).select().single();
-                        if (error) authError.value = "Registration failed"; else { currentUser.value = data; isLoggedIn.value = true; fetchFleet(); }
-                    }
-                    isLoading.value = false;
-                };
-
-                const fetchFleet = async () => {
-                    isLoadingData.value = true;
-                    
-                    const { data: dr } = await supabaseClient.from('drivers').select('*').eq('owner_id', currentUser.value.id);
-                    drivers.value = dr || [];
-
-                    const { data: c } = await supabaseClient.from('cars').select('*').eq('owner_id', currentUser.value.id);
-                    cars.value = c || [];
-                    
-                    if(cars.value.length > 0) {
-                        const { data: d } = await supabaseClient.from('documents').select('*').in('car_id', cars.value.map(c => c.id));
-                        documents.value = d || [];
-                    } else {
-                        documents.value = [];
-                    }
-                    isLoadingData.value = false;
-                };
-
-                const submitCar = async () => {
-                    const payload = { 
-                        owner_id: currentUser.value.id, 
-                        name: newCar.value.name, 
-                        plate_number: newCar.value.plate,
-                        driver_id: newCar.value.driver_id || null
-                    };
-                    await supabaseClient.from('cars').insert([payload]);
-                    newCar.value = { name: '', plate: '', driver_id: '' };
-                    showCarModal.value = false;
-                    fetchFleet();
-                };
-
-                const submitDoc = async () => {
-                    await supabaseClient.from('documents').insert([{ car_id: newDoc.value.carId, type: newDoc.value.type, expiry_date: newDoc.value.expiry }]);
-                    newDoc.value = { carId: '', type: '', expiry: '' };
-                    showDocModal.value = false;
-                    fetchFleet();
-                };
-
-                const submitDriver = async () => {
-    const { data, error } = await supabaseClient.from('drivers').insert([{ 
-        owner_id: currentUser.value.id, 
-        name: newDriver.value.name, 
-        phone: newDriver.value.phone,
-        license_expiry: newDriver.value.expiry
-    }]);
-
-    if (error) {
-        alert("Failed to add driver: " + error.message);
-        console.error("Supabase Error:", error);
-        return; // Stop here if there's an error
-    }
-
-    newDriver.value = { name: '', phone: '', expiry: '' };
-    showDriverModal.value = false;
-    activeTab.value = 'drivers';
-    fetchFleet();
-};
-
-                const openEditCar = (car) => {
-                    editCarData.value = { id: car.id, name: car.name, plate: car.plate_number, driver_id: car.driver_id || '' };
-                    showEditCarModal.value = true;
-                };
-
-                const openEditDoc = (doc) => {
-                    editDocData.value = { id: doc.id, type: doc.type, expiry: doc.expiry_date };
-                    showEditDocModal.value = true;
-                };
-
-                const openEditDriver = (driver) => {
-                    editDriverData.value = { id: driver.id, name: driver.name, phone: driver.phone, expiry: driver.license_expiry };
-                    showEditDriverModal.value = true;
-                };
-
-                const updateCar = async () => {
-                    await supabaseClient.from('cars').update({ 
-                        name: editCarData.value.name, 
-                        plate_number: editCarData.value.plate,
-                        driver_id: editCarData.value.driver_id || null
-                    }).eq('id', editCarData.value.id);
-                    showEditCarModal.value = false;
-                    fetchFleet();
-                };
-
-                const updateDoc = async () => {
-                    await supabaseClient.from('documents').update({ type: editDocData.value.type, expiry_date: editDocData.value.expiry }).eq('id', editDocData.value.id);
-                    showEditDocModal.value = false;
-                    fetchFleet();
-                };
-
-                const updateDriver = async () => {
-                    await supabaseClient.from('drivers').update({ 
-                        name: editDriverData.value.name, 
-                        phone: editDriverData.value.phone,
-                        license_expiry: editDriverData.value.expiry 
-                    }).eq('id', editDriverData.value.id);
-                    showEditDriverModal.value = false;
-                    fetchFleet();
-                };
-
-                const deleteCar = async (carId) => {
-                    if (!confirm("Are you sure you want to remove this vehicle? This will delete all its registered documents as well.")) return;
-                    await supabaseClient.from('documents').delete().eq('car_id', carId);
-                    await supabaseClient.from('cars').delete().eq('id', carId);
-                    fetchFleet();
-                };
-
-                const deleteDoc = async (docId) => {
-                    if (!confirm("Are you sure you want to remove this document?")) return;
-                    await supabaseClient.from('documents').delete().eq('id', docId);
-                    fetchFleet();
-                };
-
-                const deleteDriver = async (driverId) => {
-                    if (!confirm("Are you sure you want to remove this driver? Vehicles currently assigned to them will be unassigned.")) return;
-                    await supabaseClient.from('cars').update({ driver_id: null }).eq('driver_id', driverId);
-                    await supabaseClient.from('drivers').delete().eq('id', driverId);
-                    fetchFleet();
-                };
-
-                const getCarDocuments = (id) => documents.value.filter(d => d.car_id === id);
-                const logout = () => { isLoggedIn.value = false; activeTab.value = 'fleet'; }
-
-                return { 
-                    isLoggedIn, isLoginMode, isLoading, handleAuth, logout, 
-                    activeTab, cars, documents, drivers, getCarDocuments, getDriver, getCarsByDriver,
-                    showCarModal, showDocModal, showDriverModal, 
-                    showEditCarModal, showEditDocModal, showEditDriverModal,
-                    submitCar, submitDoc, submitDriver, 
-                    updateCar, updateDoc, updateDriver, 
-                    deleteCar, deleteDoc, deleteDriver, 
-                    openEditCar, openEditDoc, openEditDriver,
-                    newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
-                    authPassword, authName, authError, selectedCountryCode, localPhoneNumber, currentUser, toggleAuthMode, isLoadingData,
-                    totalVehicles, activeCredentials, actionNeeded, isExpiringSoon
-                };
+        // ==========================================
+        // 2. AUTHENTICATION
+        // ==========================================
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                currentUser = session.user;
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('dashboard-section').classList.remove('hidden');
+                loadDashboardData();
+                loadProfileData();
+            } else {
+                currentUser = null;
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('dashboard-section').classList.add('hidden');
             }
-        }).mount('#app');
+        });
+
+        async function register() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const msg = document.getElementById('auth-msg');
+            
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                msg.textContent = error.message;
+                msg.classList.remove('hidden');
+            } else {
+                msg.textContent = "Success! Please log in.";
+                msg.classList.replace('text-red-400', 'text-green-400');
+                msg.classList.remove('hidden');
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const msg = document.getElementById('auth-msg');
+            
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                msg.textContent = error.message;
+                msg.classList.remove('hidden');
+            }
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+        }
+
+        // ==========================================
+        // 3. PROFILE SETTINGS & ACCOUNT DELETION
+        // ==========================================
+        function toggleProfileModal() {
+            const modal = document.getElementById('profile-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        async function loadProfileData() {
+            if (!currentUser) return;
+            document.getElementById('profile-email').value = currentUser.email;
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('whatsapp_number')
+                .eq('id', currentUser.id)
+                .single();
+
+            if (data && data.whatsapp_number) {
+                document.getElementById('profile-whatsapp').value = data.whatsapp_number;
+            }
+        }
+
+        async function updateProfile() {
+            const newNumber = document.getElementById('profile-whatsapp').value;
+            const { error } = await supabase
+                .from('profiles')
+                .update({ whatsapp_number: newNumber })
+                .eq('id', currentUser.id);
+
+            if (error) {
+                alert("Failed to save: " + error.message);
+            } else {
+                alert("WhatsApp number saved successfully!");
+                toggleProfileModal();
+            }
+        }
+
+        async function deleteAccount() {
+            const confirmDelete = confirm("Are you ABSOLUTELY sure? This deletes everything permanently.");
+            if (!confirmDelete) return;
+
+            try {
+                const response = await fetch(`${RENDER_BACKEND_URL}/api/delete-account`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id })
+                });
+
+                if (response.ok) {
+                    alert("Your account and all associated data have been deleted.");
+                    await supabase.auth.signOut();
+                    toggleProfileModal();
+                } else {
+                    const errData = await response.json();
+                    alert("Failed to delete account via backend: " + (errData.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Network error. Is your Render server running? " + err.message);
+            }
+        }
+
+        // ==========================================
+        // 4. DATABASE CRUD (Vehicles & Documents)
+        // ==========================================
+        async function loadDashboardData() {
+            const { data: vehicles } = await supabase.from('vehicles').select('*').eq('user_id', currentUser.id);
+            const select = document.getElementById('doc-vehicle-select');
+            select.innerHTML = '<option value="">-- Select Vehicle --</option>'; 
+            
+            if (vehicles) {
+                vehicles.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.id;
+                    opt.textContent = `${v.make} ${v.model} (${v.license_plate})`;
+                    select.appendChild(opt);
+                });
+            }
+
+            const { data: documents } = await supabase
+                .from('documents')
+                .select('*, vehicles(make, model, license_plate)')
+                .eq('user_id', currentUser.id)
+                .order('expiry_date', { ascending: true });
+
+            const tbody = document.getElementById('data-table-body');
+            tbody.innerHTML = '';
+            
+            if (documents) {
+                documents.forEach(doc => {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-gray-700 bg-gray-800 bg-opacity-30";
+                    tr.innerHTML = `
+                        <td class="p-3">${doc.vehicles.make} ${doc.vehicles.model}</td>
+                        <td class="p-3 text-gray-400">${doc.vehicles.license_plate}</td>
+                        <td class="p-3">${doc.document_type}</td>
+                        <td class="p-3 font-semibold text-yellow-400">${doc.expiry_date}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        async function addVehicle() {
+            const make = document.getElementById('veh-make').value;
+            const model = document.getElementById('veh-model').value;
+            const plate = document.getElementById('veh-plate').value;
+
+            if(!make || !model || !plate) return alert("Please fill all vehicle fields.");
+
+            const { error } = await supabase.from('vehicles').insert([
+                { user_id: currentUser.id, make, model, license_plate: plate }
+            ]);
+
+            if (error) alert(error.message);
+            else {
+                document.getElementById('veh-make').value = '';
+                document.getElementById('veh-model').value = '';
+                document.getElementById('veh-plate').value = '';
+                loadDashboardData();
+            }
+        }
+
+        async function addDocument() {
+            const vehicleId = document.getElementById('doc-vehicle-select').value;
+            const docType = document.getElementById('doc-type').value;
+            const expiry = document.getElementById('doc-expiry').value;
+
+            if(!vehicleId || !docType || !expiry) return alert("Please fill all document fields.");
+
+            const { error } = await supabase.from('documents').insert([
+                { user_id: currentUser.id, vehicle_id: vehicleId, document_type: docType, expiry_date: expiry }
+            ]);
+
+            if (error) alert(error.message);
+            else {
+                document.getElementById('doc-type').value = '';
+                document.getElementById('doc-expiry').value = '';
+                loadDashboardData();
+            }
+        }
     </script>
 </body>
 </html>
