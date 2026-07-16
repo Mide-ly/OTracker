@@ -41,10 +41,35 @@
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Full Name</label>
                         <input type="text" v-model="authName" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="John Doe" />
                     </div>
+
+                    <!-- DYNAMIC EMAIL/PHONE INPUT -->
                     <div>
-                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Email or Phone Number</label>
-                        <input type="text" v-model="authIdentifier" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="you@example.com or 080..." />
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest">{{ usePhoneAuth ? 'Phone Number' : 'Email Address' }}</label>
+                            <button type="button" @click="usePhoneAuth = !usePhoneAuth" class="text-xs font-bold text-indigo-500 hover:text-indigo-600 transition">
+                                {{ usePhoneAuth ? 'Use Email instead' : 'Use Phone Number instead' }}
+                            </button>
+                        </div>
+
+                        <!-- Email Input -->
+                        <div v-if="!usePhoneAuth">
+                            <input type="email" v-model="authEmail" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="you@example.com" />
+                        </div>
+                        
+                        <!-- Phone Input -->
+                        <div v-else class="flex">
+                            <select v-model="selectedCountryCode" class="px-3 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 border-r-0 rounded-l-xl outline-none text-sm font-medium dark:text-white transition">
+                                <option value="+234">🇳🇬 +234</option>
+                                <option value="+233">🇬🇭 +233</option>
+                                <option value="+27">🇿🇦 +27</option>
+                                <option value="+254">🇰🇪 +254</option>
+                                <option value="+44">🇬🇧 +44</option>
+                                <option value="+1">🇺🇸 +1</option>
+                            </select>
+                            <input type="tel" v-model="localPhoneNumber" class="flex-1 px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-r-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="801 234 5678" />
+                        </div>
                     </div>
+
                     <div>
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Password</label>
                         <div class="relative">
@@ -419,12 +444,17 @@
                 const isLoginMode = ref(true);
                 const isLoading = ref(false);
                 const authName = ref('');
-                const authIdentifier = ref('');
                 const authPassword = ref('');
                 const authError = ref('');
                 const isSuccessMsg = ref(false);
                 const showPassword = ref(false);
                 const isDarkMode = ref(false);
+                
+                // Email vs Phone Auth Toggle
+                const usePhoneAuth = ref(false);
+                const authEmail = ref('');
+                const selectedCountryCode = ref('+234');
+                const localPhoneNumber = ref('');
                 
                 // Navigation
                 const activeTab = ref('fleet'); 
@@ -535,32 +565,21 @@
                     authError.value = '';
                     isSuccessMsg.value = false;
 
-                    let identifier = authIdentifier.value.trim();
-                    let isEmail = identifier.includes('@');
-                    
-                    let phoneFormat = identifier.replace(/[^0-9+]/g, '');
-                    if (!isEmail) {
-                        if (phoneFormat.startsWith('0')) {
-                            phoneFormat = '+234' + phoneFormat.substring(1);
-                        } else if (phoneFormat.startsWith('234') && phoneFormat.length >= 12) {
-                            phoneFormat = '+' + phoneFormat;
-                        } else if (!phoneFormat.startsWith('+') && phoneFormat.length === 10) {
-                            phoneFormat = '+234' + phoneFormat;
-                        } else if (!phoneFormat.startsWith('+') && phoneFormat.length > 0) {
-                            phoneFormat = '+' + phoneFormat;
-                        }
+                    let query = supabaseClient.from('users').select('*').eq('password', authPassword.value);
+                    let phoneFormat = '';
+                    let emailFormat = '';
+
+                    // Clean and build the correct credentials based on the toggle
+                    if (usePhoneAuth.value) {
+                        let cleanPhone = localPhoneNumber.value.replace(/^0+/, '').replace(/[^0-9]/g, '');
+                        phoneFormat = selectedCountryCode.value + cleanPhone;
+                        query = query.eq('phone_number', phoneFormat);
+                    } else {
+                        emailFormat = authEmail.value.trim();
+                        query = query.eq('email', emailFormat);
                     }
 
                     if (isLoginMode.value) {
-                        // Dynamically build the secure query based on input type
-                        let query = supabaseClient.from('users').select('*').eq('password', authPassword.value);
-                        
-                        if (isEmail) {
-                            query = query.eq('email', identifier);
-                        } else {
-                            query = query.eq('phone_number', phoneFormat);
-                        }
-
                         const { data, error } = await query.single();
 
                         if (error || !data) {
@@ -572,13 +591,13 @@
                             fetchFleet();
                         }
                     } else {
-                        // Registration inserts straight into your custom users table
+                        // Registration logic
                         const { data, error } = await supabaseClient
                             .from('users')
                             .insert([{
                                 name: authName.value,
-                                email: isEmail ? identifier : null,
-                                phone_number: isEmail ? null : phoneFormat,
+                                email: usePhoneAuth.value ? null : emailFormat,
+                                phone_number: usePhoneAuth.value ? phoneFormat : null,
                                 password: authPassword.value
                             }])
                             .select()
@@ -789,7 +808,8 @@
                     openEditCar, openEditDoc, openEditDriver, openProfileModal,
                     updateProfile, deleteAccount, toggleTheme, isDarkMode, contactHelpEmail,
                     newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
-                    authName, authIdentifier, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, currentUser, toggleAuthMode, isLoadingData,
+                    usePhoneAuth, authEmail, selectedCountryCode, localPhoneNumber,
+                    authName, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, currentUser, toggleAuthMode, isLoadingData,
                     totalVehicles, activeCredentials, actionNeeded, isExpiringSoon, showPassword
                 };
             }
