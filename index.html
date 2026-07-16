@@ -17,14 +17,10 @@
     </script>
 
     <style>
-        /* Light Mode Pattern */
         .bg-pattern { background-color: #fafaf9; background-image: radial-gradient(#e7e5e4 1px, transparent 1px); background-size: 24px 24px; }
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        
-        /* Dark Mode Pattern */
         .dark .bg-pattern { background-color: #1c1917; background-image: radial-gradient(#292524 1px, transparent 1px); }
         .dark .glass { background: rgba(28, 25, 23, 0.7); border-color: rgba(68, 64, 60, 0.5); }
-        
         [v-cloak] { display: none; }
     </style>
 </head>
@@ -41,6 +37,10 @@
                 </div>
                 
                 <div class="space-y-4">
+                    <div v-if="!isLoginMode">
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Full Name</label>
+                        <input type="text" v-model="authName" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="John Doe" />
+                    </div>
                     <div>
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Email or Phone Number</label>
                         <input type="text" v-model="authIdentifier" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="you@example.com or 080..." />
@@ -74,7 +74,7 @@
             <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-10">
                 <div>
                     <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900 dark:text-white">OTracker</h1>
-                    <p class="text-stone-500 dark:text-stone-400 font-medium">Hello, {{ profileName || currentUser?.email || currentUser?.phone }}. Welcome back to your fleet.</p>
+                    <p class="text-stone-500 dark:text-stone-400 font-medium">Hello, {{ currentUser?.name || currentUser?.email || currentUser?.phone_number }}. Welcome back to your fleet.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <button @click="showCarModal = true" class="bg-stone-900 dark:bg-white hover:bg-stone-800 dark:hover:bg-stone-200 text-white dark:text-stone-900 px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-stone-900/10">+ Add Vehicle</button>
@@ -86,7 +86,6 @@
             </header>
 
             <div class="flex-1">
-                
                 <!-- METRICS SECTION -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none flex items-center justify-between transition-colors">
@@ -98,7 +97,6 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
                         </div>
                     </div>
-                    
                     <div class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none flex items-center justify-between transition-colors">
                         <div>
                             <p class="text-emerald-500 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-1">Active Credentials</p>
@@ -108,7 +106,6 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
                     </div>
-
                     <div class="bg-white dark:bg-stone-800 rounded-3xl p-6 border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none flex items-center justify-between transition-colors">
                         <div>
                             <p class="text-rose-500 dark:text-rose-400 text-xs font-bold uppercase tracking-widest mb-1">Action Needed</p>
@@ -158,7 +155,6 @@
                                         </button>
                                     </div>
                                 </div>
-                                
                                 <div class="pt-4 border-t border-white/10 flex justify-between items-center bg-white/5 rounded-xl p-3">
                                     <div v-if="car.driver_id && getDriver(car.driver_id)" class="w-full flex justify-between items-center">
                                         <div class="flex items-center gap-2">
@@ -263,7 +259,7 @@
                     <div class="flex items-center gap-4">
                         <a :href="'mailto:' + contactHelpEmail" class="text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-bold transition">Contact Help</a>
                         <span class="text-stone-300 dark:text-stone-600">|</span>
-                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.1.0</span>
+                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.2.0</span>
                     </div>
                 </footer>
             </div>
@@ -297,7 +293,6 @@
                     <div>
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Email Address</label>
                         <input type="email" v-model="profileEmail" placeholder="you@example.com" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
-                        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2 font-medium">Changing this will send a verification link to your inbox.</p>
                     </div>
 
                     <!-- WhatsApp Number -->
@@ -407,16 +402,15 @@
 
     <script>
         // ==========================================
-        // 1. UPDATE YOUR URLS & CONTACT EMAIL HERE
+        // UPDATE YOUR EMAIL HERE
         // ==========================================
-        const RENDER_BACKEND_URL = 'https://otracker-e8xg.onrender.com';
         const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com'; // <-- Put your help email here
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const { createApp, ref, computed, onMounted, watch } = Vue;
+        const { createApp, ref, computed, onMounted } = Vue;
         
         createApp({
             setup() {
@@ -424,6 +418,7 @@
                 const isLoggedIn = ref(false);
                 const isLoginMode = ref(true);
                 const isLoading = ref(false);
+                const authName = ref('');
                 const authIdentifier = ref('');
                 const authPassword = ref('');
                 const authError = ref('');
@@ -465,16 +460,24 @@
                 const isLoadingData = ref(false);
 
                 // ==========================================
-                // THEME ENGINE
+                // ON MOUNT (THEME & SESSION RESTORE)
                 // ==========================================
                 onMounted(() => {
-                    // Check if user previously selected dark mode
+                    // Check local storage for Theme
                     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         isDarkMode.value = true;
                         document.documentElement.classList.add('dark');
                     } else {
                         isDarkMode.value = false;
                         document.documentElement.classList.remove('dark');
+                    }
+
+                    // Check local storage to keep user logged in
+                    const savedSession = localStorage.getItem('otracker_user');
+                    if (savedSession) {
+                        currentUser.value = JSON.parse(savedSession);
+                        isLoggedIn.value = true;
+                        fetchFleet();
                     }
                 });
 
@@ -488,23 +491,6 @@
                         localStorage.theme = 'light';
                     }
                 };
-
-                // ==========================================
-                // SUPABASE AUTH LISTENER
-                // ==========================================
-                supabaseClient.auth.onAuthStateChange((event, session) => {
-                    if (session) {
-                        currentUser.value = session.user;
-                        isLoggedIn.value = true;
-                        fetchFleet();
-                    } else {
-                        currentUser.value = {};
-                        isLoggedIn.value = false;
-                        cars.value = [];
-                        documents.value = [];
-                        drivers.value = [];
-                    }
-                });
 
                 // ==========================================
                 // HELPER FUNCTIONS
@@ -536,7 +522,7 @@
                 });
 
                 // ==========================================
-                // AUTHENTICATION & PROFILE LOGIC
+                // CUSTOM DATABASE AUTHENTICATION LOGIC
                 // ==========================================
                 const toggleAuthMode = () => { 
                     isLoginMode.value = !isLoginMode.value; 
@@ -551,24 +537,46 @@
 
                     let identifier = authIdentifier.value.trim();
                     let isEmail = identifier.includes('@');
-                    let credentials = {};
-
-                    if (isEmail) {
-                        credentials = { email: identifier, password: authPassword.value };
-                    } else {
-                        let phone = identifier.replace(/[^0-9+]/g, '');
-                        if (phone.startsWith('0')) phone = '+234' + phone.substring(1);
-                        else if (!phone.startsWith('+')) phone = '+' + phone;
-                        credentials = { phone: phone, password: authPassword.value };
+                    
+                    let phoneFormat = identifier.replace(/[^0-9+]/g, '');
+                    if (!isEmail) {
+                        if (phoneFormat.startsWith('0')) phoneFormat = '+234' + phoneFormat.substring(1);
+                        else if (!phoneFormat.startsWith('+') && phoneFormat.length > 0) phoneFormat = '+' + phoneFormat;
                     }
 
                     if (isLoginMode.value) {
-                        const { error } = await supabaseClient.auth.signInWithPassword(credentials);
-                        if (error) authError.value = error.message;
+                        // Securely querying the custom users table
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .select('*')
+                            .eq('password', authPassword.value)
+                            .or(`email.eq.${identifier},phone_number.eq.${phoneFormat}`)
+                            .single();
+
+                        if (error || !data) {
+                            authError.value = "Invalid credentials. Please try again.";
+                        } else {
+                            currentUser.value = data;
+                            localStorage.setItem('otracker_user', JSON.stringify(data)); // Save session
+                            isLoggedIn.value = true;
+                            fetchFleet();
+                        }
                     } else {
-                        const { error } = await supabaseClient.auth.signUp(credentials);
-                        if (error) authError.value = error.message;
-                        else { 
+                        // Registration inserts straight into your custom users table
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .insert([{
+                                name: authName.value,
+                                email: isEmail ? identifier : null,
+                                phone_number: isEmail ? null : phoneFormat,
+                                password: authPassword.value
+                            }])
+                            .select()
+                            .single();
+
+                        if (error) {
+                            authError.value = "Registration failed: " + error.message;
+                        } else { 
                             authError.value = "Registration successful! You may now log in."; 
                             isSuccessMsg.value = true;
                             isLoginMode.value = true; 
@@ -577,47 +585,41 @@
                     isLoading.value = false;
                 };
 
-                const logout = async () => {
-                    await supabaseClient.auth.signOut();
+                const logout = () => {
+                    localStorage.removeItem('otracker_user');
+                    currentUser.value = {};
+                    isLoggedIn.value = false;
+                    cars.value = [];
+                    documents.value = [];
+                    drivers.value = [];
                 };
 
-                const openProfileModal = async () => {
+                const openProfileModal = () => {
                     if (!currentUser.value.id) return;
-                    
-                    // Pre-fill Name & Email from Supabase Auth MetaData
-                    profileName.value = currentUser.value.user_metadata?.full_name || '';
+                    profileName.value = currentUser.value.name || '';
                     profileEmail.value = currentUser.value.email || '';
-
-                    // Fetch WhatsApp from Profiles Table
-                    const { data, error } = await supabaseClient.from('profiles').select('whatsapp_number').eq('id', currentUser.value.id).single();
-                    if (data && data.whatsapp_number) {
-                        profilePhone.value = data.whatsapp_number;
-                    }
+                    profilePhone.value = currentUser.value.phone_number || '';
                     showProfileModal.value = true;
                 };
 
                 const updateProfile = async () => {
                     try {
-                        // 1. Update Name in secure Auth metadata
-                        const authUpdates = { data: { full_name: profileName.value } };
-                        
-                        // 2. Only submit email update if it actually changed
-                        if (profileEmail.value && profileEmail.value !== currentUser.value.email) {
-                            authUpdates.email = profileEmail.value;
-                        }
+                        const { data, error } = await supabaseClient
+                            .from('users')
+                            .update({
+                                name: profileName.value,
+                                email: profileEmail.value,
+                                phone_number: profilePhone.value
+                            })
+                            .eq('id', currentUser.value.id)
+                            .select()
+                            .single();
 
-                        const { error: authError } = await supabaseClient.auth.updateUser(authUpdates);
-                        if (authError) throw authError;
+                        if (error) throw error;
 
-                        // 3. Update WhatsApp number in the Database table
-                        const { error: dbError } = await supabaseClient.from('profiles').update({ whatsapp_number: profilePhone.value }).eq('id', currentUser.value.id);
-                        if (dbError) throw dbError;
-
-                        alert("Profile updated successfully! (If you changed your email, Supabase sent a verification link to your inbox).");
-                        
-                        // Refresh the local reactive variable immediately
-                        currentUser.value.user_metadata = { ...currentUser.value.user_metadata, full_name: profileName.value };
-                        
+                        alert("Profile settings saved successfully!");
+                        currentUser.value = data; // Update local state
+                        localStorage.setItem('otracker_user', JSON.stringify(data)); // Update stored state
                         showProfileModal.value = false;
                     } catch (error) {
                         alert("Error saving profile: " + error.message);
@@ -628,22 +630,22 @@
                     if (!confirm("Are you ABSOLUTELY sure? This deletes everything permanently.")) return;
                     
                     try {
-                        const response = await fetch(`${RENDER_BACKEND_URL}/api/delete-account`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ userId: currentUser.value.id })
-                        });
-
-                        if (response.ok) {
-                            alert("Your account and all associated data have been deleted.");
-                            await supabaseClient.auth.signOut();
-                            showProfileModal.value = false;
-                        } else {
-                            const errData = await response.json();
-                            alert("Failed to delete account: " + (errData.error || "Unknown error"));
+                        // Cascade delete manually
+                        if (cars.value.length > 0) {
+                            await supabaseClient.from('documents').delete().in('car_id', cars.value.map(c => c.id));
                         }
+                        await supabaseClient.from('cars').delete().eq('owner_id', currentUser.value.id);
+                        await supabaseClient.from('drivers').delete().eq('owner_id', currentUser.value.id);
+                        
+                        // Delete user profile
+                        const { error } = await supabaseClient.from('users').delete().eq('id', currentUser.value.id);
+                        if (error) throw error;
+
+                        alert("Your account and all associated data have been deleted.");
+                        logout();
+                        showProfileModal.value = false;
                     } catch (err) {
-                        alert("Network error. Is your Render backend URL correct? " + err.message);
+                        alert("Error deleting account: " + err.message);
                     }
                 };
 
@@ -654,13 +656,6 @@
                     if (!currentUser.value.id) return;
                     isLoadingData.value = true;
                     
-                    // Also refresh auth user data just in case it was updated
-                    const { data: { user } } = await supabaseClient.auth.getUser();
-                    if(user) {
-                        currentUser.value = user;
-                        profileName.value = user.user_metadata?.full_name || '';
-                    }
-
                     const { data: dr } = await supabaseClient.from('drivers').select('*').eq('owner_id', currentUser.value.id);
                     drivers.value = dr || [];
 
@@ -784,7 +779,7 @@
                     openEditCar, openEditDoc, openEditDriver, openProfileModal,
                     updateProfile, deleteAccount, toggleTheme, isDarkMode, contactHelpEmail,
                     newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
-                    authIdentifier, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, currentUser, toggleAuthMode, isLoadingData,
+                    authName, authIdentifier, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, currentUser, toggleAuthMode, isLoadingData,
                     totalVehicles, activeCredentials, actionNeeded, isExpiringSoon, showPassword
                 };
             }
