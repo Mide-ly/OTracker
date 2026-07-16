@@ -29,8 +29,8 @@
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Email Address</label>
-                        <input type="email" v-model="authEmail" class="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none transition" placeholder="you@example.com" />
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Email or Phone Number</label>
+                        <input type="text" v-model="authIdentifier" class="w-full px-5 py-3.5 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-900 outline-none transition" placeholder="you@example.com or 080..." />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Password</label>
@@ -54,7 +54,7 @@
             <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-10">
                 <div>
                     <h1 class="text-4xl font-extrabold tracking-tighter text-stone-900">OTracker</h1>
-                    <p class="text-stone-500 font-medium">Hello, {{ currentUser?.email }}. Welcome back to your fleet.</p>
+                    <p class="text-stone-500 font-medium">Hello, {{ currentUser?.email || currentUser?.phone }}. Welcome back to your fleet.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <button @click="showCarModal = true" class="bg-stone-900 hover:bg-stone-800 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-stone-900/10">+ Add Vehicle</button>
@@ -240,8 +240,8 @@
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Account Email</label>
-                        <input type="email" disabled :value="currentUser?.email" class="w-full p-4 bg-stone-100 text-stone-500 rounded-2xl border border-stone-200 cursor-not-allowed">
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Account Identification</label>
+                        <input type="text" disabled :value="currentUser?.email || currentUser?.phone" class="w-full p-4 bg-stone-100 text-stone-500 rounded-2xl border border-stone-200 cursor-not-allowed">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">WhatsApp Number</label>
@@ -356,7 +356,7 @@
                 const isLoggedIn = ref(false);
                 const isLoginMode = ref(true);
                 const isLoading = ref(false);
-                const authEmail = ref('');
+                const authIdentifier = ref('');
                 const authPassword = ref('');
                 const authError = ref('');
                 const isSuccessMsg = ref(false);
@@ -451,13 +451,32 @@
                     authError.value = '';
                     isSuccessMsg.value = false;
 
+                    let identifier = authIdentifier.value.trim();
+                    let isEmail = identifier.includes('@');
+                    let credentials = {};
+
+                    if (isEmail) {
+                        credentials = { email: identifier, password: authPassword.value };
+                    } else {
+                        // Clean phone number
+                        let phone = identifier.replace(/[^0-9+]/g, '');
+                        // Auto-format for Nigerian numbers if they forgot the country code
+                        if (phone.startsWith('0')) {
+                            phone = '+234' + phone.substring(1);
+                        } else if (!phone.startsWith('+')) {
+                            phone = '+' + phone;
+                        }
+                        credentials = { phone: phone, password: authPassword.value };
+                    }
+
                     if (isLoginMode.value) {
-                        const { error } = await supabaseClient.auth.signInWithPassword({ email: authEmail.value, password: authPassword.value });
+                        const { error } = await supabaseClient.auth.signInWithPassword(credentials);
                         if (error) authError.value = error.message;
                     } else {
-                        const { error } = await supabaseClient.auth.signUp({ email: authEmail.value, password: authPassword.value });
-                        if (error) authError.value = error.message;
-                        else { 
+                        const { error } = await supabaseClient.auth.signUp(credentials);
+                        if (error) {
+                            authError.value = error.message;
+                        } else { 
                             authError.value = "Registration successful! You may now log in."; 
                             isSuccessMsg.value = true;
                             isLoginMode.value = true; 
@@ -641,7 +660,7 @@
                     openEditCar, openEditDoc, openEditDriver,
                     updateProfile, deleteAccount,
                     newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
-                    authEmail, authPassword, authError, isSuccessMsg, profilePhone, currentUser, toggleAuthMode, isLoadingData,
+                    authIdentifier, authPassword, authError, isSuccessMsg, profilePhone, currentUser, toggleAuthMode, isLoadingData,
                     totalVehicles, activeCredentials, actionNeeded, isExpiringSoon
                 };
             }
