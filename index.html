@@ -540,18 +540,28 @@
                     
                     let phoneFormat = identifier.replace(/[^0-9+]/g, '');
                     if (!isEmail) {
-                        if (phoneFormat.startsWith('0')) phoneFormat = '+234' + phoneFormat.substring(1);
-                        else if (!phoneFormat.startsWith('+') && phoneFormat.length > 0) phoneFormat = '+' + phoneFormat;
+                        if (phoneFormat.startsWith('0')) {
+                            phoneFormat = '+234' + phoneFormat.substring(1);
+                        } else if (phoneFormat.startsWith('234') && phoneFormat.length >= 12) {
+                            phoneFormat = '+' + phoneFormat;
+                        } else if (!phoneFormat.startsWith('+') && phoneFormat.length === 10) {
+                            phoneFormat = '+234' + phoneFormat;
+                        } else if (!phoneFormat.startsWith('+') && phoneFormat.length > 0) {
+                            phoneFormat = '+' + phoneFormat;
+                        }
                     }
 
                     if (isLoginMode.value) {
-                        // Securely querying the custom users table
-                        const { data, error } = await supabaseClient
-                            .from('users')
-                            .select('*')
-                            .eq('password', authPassword.value)
-                            .or(`email.eq.${identifier},phone_number.eq.${phoneFormat}`)
-                            .single();
+                        // Dynamically build the secure query based on input type
+                        let query = supabaseClient.from('users').select('*').eq('password', authPassword.value);
+                        
+                        if (isEmail) {
+                            query = query.eq('email', identifier);
+                        } else {
+                            query = query.eq('phone_number', phoneFormat);
+                        }
+
+                        const { data, error } = await query.single();
 
                         if (error || !data) {
                             authError.value = "Invalid credentials. Please try again.";
