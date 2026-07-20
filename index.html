@@ -11,7 +11,6 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
-    <!-- Configures Tailwind to support manual Dark Mode toggling -->
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
@@ -22,6 +21,25 @@
         .dark .bg-pattern { background-color: #1c1917; background-image: radial-gradient(#292524 1px, transparent 1px); }
         .dark .glass { background: rgba(28, 25, 23, 0.7); border-color: rgba(68, 64, 60, 0.5); }
         [v-cloak] { display: none; }
+        
+        /* Custom file input styling */
+        input[type="file"]::file-selector-button {
+            border: none;
+            background: #e7e5e4;
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #44403c;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 12px;
+            transition: all 0.2s;
+        }
+        .dark input[type="file"]::file-selector-button {
+            background: #44403c;
+            color: #e7e5e4;
+        }
+        input[type="file"]::file-selector-button:hover { background: #d6d3d1; }
+        .dark input[type="file"]::file-selector-button:hover { background: #57534e; }
     </style>
 </head>
 <body class="bg-pattern text-stone-900 dark:text-stone-100 min-h-screen font-sans antialiased transition-colors duration-300">
@@ -51,12 +69,10 @@
                             </button>
                         </div>
 
-                        <!-- Email Input -->
                         <div v-if="!usePhoneAuth">
                             <input type="email" v-model="authEmail" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="you@example.com" />
                         </div>
                         
-                        <!-- Phone Input -->
                         <div v-else class="flex">
                             <select v-model="selectedCountryCode" class="px-3 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 border-r-0 rounded-l-xl outline-none text-sm font-medium dark:text-white transition">
                                 <option value="+234">🇳🇬 +234</option>
@@ -156,7 +172,6 @@
                 <!-- TAB CONTENT: FLEET REGISTRY -->
                 <div v-if="activeTab === 'fleet'">
                     
-                    <!-- VEHICLE SEARCH BAR -->
                     <div v-if="cars.length > 0" class="mb-6 relative">
                         <input type="text" v-model="searchQuery" placeholder="Search by vehicle name or plate number..." class="w-full pl-12 pr-10 py-3.5 bg-white dark:bg-stone-800 border border-stone-200/60 dark:border-stone-700 rounded-2xl outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition shadow-sm" />
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">
@@ -165,7 +180,6 @@
                         <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-white text-lg font-bold transition">&times;</button>
                     </div>
 
-                    <!-- EMPTY FLEET STATE -->
                     <div v-if="cars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 dark:border-stone-700 mb-10">
                         <div class="text-center">
                             <h2 class="text-2xl font-bold text-stone-900 dark:text-white mb-2">No Vehicles Yet</h2>
@@ -174,7 +188,6 @@
                         </div>
                     </div>
 
-                    <!-- NO SEARCH RESULTS STATE -->
                     <div v-else-if="filteredCars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 dark:border-stone-700 mb-10">
                         <div class="text-center">
                             <h2 class="text-xl font-bold text-stone-900 dark:text-white mb-1">No Matching Vehicles</h2>
@@ -216,6 +229,7 @@
                                     </div>
                                 </div>
                             </div>
+                            
                             <div class="p-6 flex-1 flex flex-col justify-between">
                                 <table class="w-full text-left mb-4">
                                     <thead class="text-stone-400 dark:text-stone-500 text-xs uppercase tracking-widest font-bold border-b border-stone-100 dark:border-stone-700/50">
@@ -227,7 +241,20 @@
                                     </thead>
                                     <tbody>
                                         <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 dark:border-stone-700/50 last:border-0 group">
-                                            <td class="py-4 font-semibold text-stone-800 dark:text-stone-200">{{ doc.type }}</td>
+                                            
+                                            <!-- NEW: IMAGE PREVIEW THUMBNAIL -->
+                                            <td class="py-4 font-semibold text-stone-800 dark:text-stone-200">
+                                                <div class="flex items-center gap-3">
+                                                    <a v-if="doc.image_url" :href="doc.image_url" target="_blank" title="View full document">
+                                                        <img :src="doc.image_url" class="w-10 h-10 object-cover rounded-lg border border-stone-200 dark:border-stone-700 hover:opacity-80 transition cursor-pointer" />
+                                                    </a>
+                                                    <div v-else class="w-10 h-10 bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg flex items-center justify-center text-stone-400 text-xs" title="No image uploaded">
+                                                        📄
+                                                    </div>
+                                                    <span>{{ doc.type }}</span>
+                                                </div>
+                                            </td>
+
                                             <td class="py-4 text-right font-mono transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-stone-500 dark:text-stone-400'">
                                                 {{ doc.expiry_date }}
                                             </td>
@@ -248,7 +275,6 @@
                                     </tbody>
                                 </table>
                                 
-                                <!-- NEW INDIVIDUAL ADD DOCUMENT BUTTON -->
                                 <button @click="openAddDocForCar(car.id)" class="w-full mt-auto py-2.5 border border-dashed border-stone-300 dark:border-stone-600 hover:border-amber-500 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-500 text-stone-400 dark:text-stone-500 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors duration-200">
                                     + Add Document
                                 </button>
@@ -309,7 +335,7 @@
                     <div class="flex items-center gap-4">
                         <a :href="'mailto:' + contactHelpEmail" class="text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-bold transition">Contact Help</a>
                         <span class="text-stone-300 dark:text-stone-600">|</span>
-                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.4.0</span>
+                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.5.0</span>
                     </div>
                 </footer>
             </div>
@@ -322,7 +348,6 @@
                 <h3 class="text-2xl font-bold mb-6 text-stone-900 dark:text-white">Profile Settings</h3>
                 
                 <div class="space-y-4">
-                    <!-- Theme Toggle -->
                     <div class="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700">
                         <div>
                             <p class="font-bold text-sm text-stone-900 dark:text-white">Dark Mode</p>
@@ -333,26 +358,22 @@
                         </button>
                     </div>
 
-                    <!-- Profile Name -->
                     <div>
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Account Name</label>
                         <input type="text" v-model="profileName" placeholder="Your Name or Company" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
                     </div>
                     
-                    <!-- Email Update -->
                     <div>
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Email Address</label>
                         <input type="email" v-model="profileEmail" placeholder="you@example.com" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
                     </div>
 
-                    <!-- WhatsApp Number -->
                     <div>
                         <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">WhatsApp Notifications</label>
                         <input type="text" v-model="profilePhone" placeholder="+2348000000000" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
                         <p class="text-xs text-stone-400 dark:text-stone-500 mt-2 font-medium">Include country code for Twilio reminders.</p>
                     </div>
 
-                    <!-- Support Link inside Settings -->
                     <div class="flex items-center gap-2 pt-2 pb-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-indigo-500"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                         <a :href="'mailto:' + contactHelpEmail" class="text-sm font-bold text-indigo-500 hover:text-indigo-600 transition">Contact Support Team</a>
@@ -387,16 +408,31 @@
         </div>
 
         <div v-if="showDocModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700 relative">
+                
+                <!-- Loading Overlay -->
+                <div v-if="isUploadingDoc" class="absolute inset-0 bg-white/80 dark:bg-stone-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl">
+                    <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p class="text-stone-900 dark:text-white font-bold">Uploading Document...</p>
+                </div>
+
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Add Document</h3>
+                
                 <select v-model="newDoc.carId" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white">
                     <option value="" disabled>-- Select Vehicle --</option>
                     <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
                 </select>
-                <input v-model="newDoc.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
-                <input type="date" v-model="newDoc.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                
+                <input v-model="newDoc.type" placeholder="Document Type (e.g. Insurance)" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                
+                <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1 mt-1">Expiry Date</label>
+                <input type="date" v-model="newDoc.expiry" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                
+                <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1 mt-1">Document Image (Optional)</label>
+                <input type="file" @change="handleFileSelect" accept="image/*" class="w-full mb-6 text-sm text-stone-500 dark:text-stone-400" />
+                
                 <button @click="submitDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600 transition">Save Document</button>
-                <button @click="showDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
+                <button @click="showDocModal = false; selectedFile = null" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
@@ -429,12 +465,23 @@
         </div>
 
         <div v-if="showEditDocModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
+            <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700 relative">
+                
+                <!-- Loading Overlay -->
+                <div v-if="isUploadingDoc" class="absolute inset-0 bg-white/80 dark:bg-stone-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl">
+                    <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p class="text-stone-900 dark:text-white font-bold">Updating Document...</p>
+                </div>
+
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Document</h3>
                 <input v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
-                <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                
+                <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1 mt-1">Replace Image (Optional)</label>
+                <input type="file" @change="handleFileSelect" accept="image/*" class="w-full mb-6 text-sm text-stone-500 dark:text-stone-400" />
+                
                 <button @click="updateDoc" class="w-full bg-amber-500 text-white p-4 rounded-2xl font-bold hover:bg-amber-600 transition">Update Document</button>
-                <button @click="showEditDocModal = false" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
+                <button @click="showEditDocModal = false; selectedFile = null" class="w-full mt-3 text-stone-400 text-sm font-bold hover:text-stone-600 dark:hover:text-stone-300 transition">Cancel</button>
             </div>
         </div>
 
@@ -455,7 +502,7 @@
         // ==========================================
         // UPDATE YOUR EMAIL HERE
         // ==========================================
-        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com'; // <-- Put your help email here
+        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
@@ -513,10 +560,14 @@
                 const newDoc = ref({ carId: '', type: '', expiry: '' });
                 const newDriver = ref({ name: '', phone: '', expiry: '' });
                 const editCarData = ref({ id: '', name: '', plate: '', driver_id: '' });
-                const editDocData = ref({ id: '', type: '', expiry: '' });
+                const editDocData = ref({ id: '', type: '', expiry: '', image_url: '' });
                 const editDriverData = ref({ id: '', name: '', phone: '', expiry: '' });
                 
                 const isLoadingData = ref(false);
+                
+                // Image Upload State
+                const selectedFile = ref(null);
+                const isUploadingDoc = ref(false);
 
                 // ==========================================
                 // ON MOUNT (THEME & SESSION RESTORE)
@@ -565,7 +616,6 @@
                 const getDriver = (driverId) => drivers.value.find(d => d.id === driverId);
                 const getCarsByDriver = (driverId) => cars.value.filter(c => c.driver_id === driverId);
 
-                // --- SEARCH COMPUTED PROPERTY ---
                 const filteredCars = computed(() => {
                     if (!searchQuery.value.trim()) return cars.value;
                     const query = searchQuery.value.toLowerCase().trim();
@@ -576,7 +626,6 @@
                     });
                 });
 
-                // --- METRICS ---
                 const totalVehicles = computed(() => cars.value.length);
                 const activeCredentials = computed(() => {
                     const docsSafe = documents.value.filter(doc => !isExpiringSoon(doc.expiry_date)).length;
@@ -748,16 +797,54 @@
                     fetchFleet();
                 };
 
-                // NEW: Smart Add Document Function
+                // File input handler
+                const handleFileSelect = (event) => {
+                    selectedFile.value = event.target.files[0];
+                };
+
+                // Smart Add Document
                 const openAddDocForCar = (carId) => {
                     newDoc.value = { carId: carId, type: '', expiry: '' };
+                    selectedFile.value = null;
                     showDocModal.value = true;
                 };
 
                 const submitDoc = async () => {
-                    await supabaseClient.from('documents').insert([{ car_id: newDoc.value.carId, type: newDoc.value.type, expiry_date: newDoc.value.expiry }]);
+                    isUploadingDoc.value = true;
+                    let finalImageUrl = null;
+
+                    // Upload Image if selected
+                    if (selectedFile.value) {
+                        const fileExt = selectedFile.value.name.split('.').pop();
+                        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+
+                        const { error: uploadError } = await supabaseClient.storage
+                            .from('document_images')
+                            .upload(fileName, selectedFile.value);
+
+                        if (uploadError) {
+                            alert("Failed to upload image: " + uploadError.message);
+                            isUploadingDoc.value = false;
+                            return;
+                        }
+
+                        // Get Public URL
+                        const { data: urlData } = supabaseClient.storage.from('document_images').getPublicUrl(fileName);
+                        finalImageUrl = urlData.publicUrl;
+                    }
+
+                    // Save Document Database Entry
+                    await supabaseClient.from('documents').insert([{ 
+                        car_id: newDoc.value.carId, 
+                        type: newDoc.value.type, 
+                        expiry_date: newDoc.value.expiry,
+                        image_url: finalImageUrl
+                    }]);
+                    
                     newDoc.value = { carId: '', type: '', expiry: '' };
+                    selectedFile.value = null;
                     showDocModal.value = false;
+                    isUploadingDoc.value = false;
                     fetchFleet();
                 };
 
@@ -781,7 +868,8 @@
                 };
 
                 const openEditDoc = (doc) => {
-                    editDocData.value = { id: doc.id, type: doc.type, expiry: doc.expiry_date };
+                    editDocData.value = { id: doc.id, type: doc.type, expiry: doc.expiry_date, image_url: doc.image_url };
+                    selectedFile.value = null;
                     showEditDocModal.value = true;
                 };
 
@@ -801,8 +889,33 @@
                 };
 
                 const updateDoc = async () => {
-                    await supabaseClient.from('documents').update({ type: editDocData.value.type, expiry_date: editDocData.value.expiry }).eq('id', editDocData.value.id);
+                    isUploadingDoc.value = true;
+                    let finalImageUrl = editDocData.value.image_url;
+
+                    // Upload new Image if selected
+                    if (selectedFile.value) {
+                        const fileExt = selectedFile.value.name.split('.').pop();
+                        const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+
+                        const { error: uploadError } = await supabaseClient.storage
+                            .from('document_images')
+                            .upload(fileName, selectedFile.value);
+
+                        if (!uploadError) {
+                            const { data: urlData } = supabaseClient.storage.from('document_images').getPublicUrl(fileName);
+                            finalImageUrl = urlData.publicUrl;
+                        }
+                    }
+
+                    await supabaseClient.from('documents').update({ 
+                        type: editDocData.value.type, 
+                        expiry_date: editDocData.value.expiry,
+                        image_url: finalImageUrl
+                    }).eq('id', editDocData.value.id);
+                    
+                    selectedFile.value = null;
                     showEditDocModal.value = false;
+                    isUploadingDoc.value = false;
                     fetchFleet();
                 };
 
@@ -843,7 +956,7 @@
                     activeTab, cars, filteredCars, searchQuery, documents, drivers, getCarDocuments, getDriver, getCarsByDriver,
                     showProfileModal, showCarModal, showDocModal, showDriverModal, 
                     showEditCarModal, showEditDocModal, showEditDriverModal,
-                    submitCar, submitDoc, submitDriver, openAddDocForCar,
+                    submitCar, submitDoc, submitDriver, openAddDocForCar, handleFileSelect, isUploadingDoc,
                     updateCar, updateDoc, updateDriver, 
                     deleteCar, deleteDoc, deleteDriver, 
                     openEditCar, openEditDoc, openEditDriver, openProfileModal,
