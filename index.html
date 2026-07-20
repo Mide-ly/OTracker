@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
+    <!-- Configures Tailwind to support manual Dark Mode toggling -->
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
@@ -69,10 +70,12 @@
                             </button>
                         </div>
 
+                        <!-- Email Input -->
                         <div v-if="!usePhoneAuth">
                             <input type="email" v-model="authEmail" class="w-full px-5 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 outline-none transition dark:text-white" placeholder="you@example.com" />
                         </div>
                         
+                        <!-- Phone Input -->
                         <div v-else class="flex">
                             <select v-model="selectedCountryCode" class="px-3 py-3.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 border-r-0 rounded-l-xl outline-none text-sm font-medium dark:text-white transition">
                                 <option value="+234">🇳🇬 +234</option>
@@ -242,7 +245,6 @@
                                     <tbody>
                                         <tr v-for="doc in getCarDocuments(car.id)" :key="doc.id" class="border-b border-stone-50 dark:border-stone-700/50 last:border-0 group">
                                             
-                                            <!-- NEW: IMAGE PREVIEW THUMBNAIL -->
                                             <td class="py-4 font-semibold text-stone-800 dark:text-stone-200">
                                                 <div class="flex items-center gap-3">
                                                     <a v-if="doc.image_url" :href="doc.image_url" target="_blank" title="View full document">
@@ -335,7 +337,7 @@
                     <div class="flex items-center gap-4">
                         <a :href="'mailto:' + contactHelpEmail" class="text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-bold transition">Contact Help</a>
                         <span class="text-stone-300 dark:text-stone-600">|</span>
-                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.5.0</span>
+                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.6.0</span>
                     </div>
                 </footer>
             </div>
@@ -410,7 +412,6 @@
         <div v-if="showDocModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700 relative">
                 
-                <!-- Loading Overlay -->
                 <div v-if="isUploadingDoc" class="absolute inset-0 bg-white/80 dark:bg-stone-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl">
                     <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
                     <p class="text-stone-900 dark:text-white font-bold">Uploading Document...</p>
@@ -423,7 +424,11 @@
                     <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
                 </select>
                 
-                <input v-model="newDoc.type" placeholder="Document Type (e.g. Insurance)" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                <!-- NEW SMART INPUT WITH DATALIST -->
+                <input list="addDocTypes" v-model="newDoc.type" placeholder="Document Type (e.g. Insurance)" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                <datalist id="addDocTypes">
+                    <option v-for="t in uniqueDocumentTypes" :key="t" :value="t"></option>
+                </datalist>
                 
                 <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1 mt-1">Expiry Date</label>
                 <input type="date" v-model="newDoc.expiry" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
@@ -467,14 +472,19 @@
         <div v-if="showEditDocModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700 relative">
                 
-                <!-- Loading Overlay -->
                 <div v-if="isUploadingDoc" class="absolute inset-0 bg-white/80 dark:bg-stone-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-3xl">
                     <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
                     <p class="text-stone-900 dark:text-white font-bold">Updating Document...</p>
                 </div>
 
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Document</h3>
-                <input v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                
+                <!-- NEW SMART INPUT WITH DATALIST -->
+                <input list="editDocTypes" v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
+                <datalist id="editDocTypes">
+                    <option v-for="t in uniqueDocumentTypes" :key="t" :value="t"></option>
+                </datalist>
+
                 <input type="date" v-model="editDocData.expiry" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
                 
                 <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1 mt-1">Replace Image (Optional)</label>
@@ -502,7 +512,7 @@
         // ==========================================
         // UPDATE YOUR EMAIL HERE
         // ==========================================
-        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';
+       const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
@@ -615,6 +625,12 @@
 
                 const getDriver = (driverId) => drivers.value.find(d => d.id === driverId);
                 const getCarsByDriver = (driverId) => cars.value.filter(c => c.driver_id === driverId);
+
+                // Computes all unique document types from the database for the dropdown
+                const uniqueDocumentTypes = computed(() => {
+                    const types = documents.value.map(doc => doc.type);
+                    return [...new Set(types)].filter(Boolean); 
+                });
 
                 const filteredCars = computed(() => {
                     if (!searchQuery.value.trim()) return cars.value;
@@ -797,12 +813,10 @@
                     fetchFleet();
                 };
 
-                // File input handler
                 const handleFileSelect = (event) => {
                     selectedFile.value = event.target.files[0];
                 };
 
-                // Smart Add Document
                 const openAddDocForCar = (carId) => {
                     newDoc.value = { carId: carId, type: '', expiry: '' };
                     selectedFile.value = null;
@@ -813,7 +827,6 @@
                     isUploadingDoc.value = true;
                     let finalImageUrl = null;
 
-                    // Upload Image if selected
                     if (selectedFile.value) {
                         const fileExt = selectedFile.value.name.split('.').pop();
                         const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
@@ -828,12 +841,10 @@
                             return;
                         }
 
-                        // Get Public URL
                         const { data: urlData } = supabaseClient.storage.from('document_images').getPublicUrl(fileName);
                         finalImageUrl = urlData.publicUrl;
                     }
 
-                    // Save Document Database Entry
                     await supabaseClient.from('documents').insert([{ 
                         car_id: newDoc.value.carId, 
                         type: newDoc.value.type, 
@@ -892,7 +903,6 @@
                     isUploadingDoc.value = true;
                     let finalImageUrl = editDocData.value.image_url;
 
-                    // Upload new Image if selected
                     if (selectedFile.value) {
                         const fileExt = selectedFile.value.name.split('.').pop();
                         const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
@@ -953,7 +963,7 @@
 
                 return { 
                     isLoggedIn, isLoginMode, isLoading, handleAuth, logout, 
-                    activeTab, cars, filteredCars, searchQuery, documents, drivers, getCarDocuments, getDriver, getCarsByDriver,
+                    activeTab, cars, filteredCars, searchQuery, documents, uniqueDocumentTypes, drivers, getCarDocuments, getDriver, getCarsByDriver,
                     showProfileModal, showCarModal, showDocModal, showDriverModal, 
                     showEditCarModal, showEditDocModal, showEditDriverModal,
                     submitCar, submitDoc, submitDriver, openAddDocForCar, handleFileSelect, isUploadingDoc,
