@@ -104,7 +104,7 @@
                 <div class="flex flex-wrap gap-3">
                     <button @click="showCarModal = true" class="bg-stone-900 dark:bg-white hover:bg-stone-800 dark:hover:bg-stone-200 text-white dark:text-stone-900 px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-stone-900/10">+ Add Vehicle</button>
                     <button @click="showDriverModal = true" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-indigo-500/10">+ Add Driver</button>
-                    <button v-if="cars.length > 0" @click="showDocModal = true" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-amber-500/10">+ Add Document</button>
+                    <button v-if="cars.length > 0" @click="openAddDocForCar('')" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-amber-500/10">+ Add Document</button>
                     <button @click="openProfileModal" class="bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 px-6 py-3 rounded-xl font-bold transition">Settings</button>
                     <button @click="logout" class="bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 px-6 py-3 rounded-xl font-bold transition">Logout</button>
                 </div>
@@ -216,8 +216,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="p-6 flex-1">
-                                <table class="w-full text-left">
+                            <div class="p-6 flex-1 flex flex-col justify-between">
+                                <table class="w-full text-left mb-4">
                                     <thead class="text-stone-400 dark:text-stone-500 text-xs uppercase tracking-widest font-bold border-b border-stone-100 dark:border-stone-700/50">
                                         <tr>
                                             <th class="pb-3">Type</th>
@@ -247,6 +247,11 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                                
+                                <!-- NEW INDIVIDUAL ADD DOCUMENT BUTTON -->
+                                <button @click="openAddDocForCar(car.id)" class="w-full mt-auto py-2.5 border border-dashed border-stone-300 dark:border-stone-600 hover:border-amber-500 hover:text-amber-600 dark:hover:border-amber-500 dark:hover:text-amber-500 text-stone-400 dark:text-stone-500 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors duration-200">
+                                    + Add Document
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -304,7 +309,7 @@
                     <div class="flex items-center gap-4">
                         <a :href="'mailto:' + contactHelpEmail" class="text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-bold transition">Contact Help</a>
                         <span class="text-stone-300 dark:text-stone-600">|</span>
-                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.3.0</span>
+                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.4.0</span>
                     </div>
                 </footer>
             </div>
@@ -385,6 +390,7 @@
             <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-stone-200 dark:border-stone-700">
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Add Document</h3>
                 <select v-model="newDoc.carId" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white">
+                    <option value="" disabled>-- Select Vehicle --</option>
                     <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
                 </select>
                 <input v-model="newDoc.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
@@ -449,7 +455,7 @@
         // ==========================================
         // UPDATE YOUR EMAIL HERE
         // ==========================================
-         const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';// <-- Put your help email here
+        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com'; // <-- Put your help email here
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
@@ -742,6 +748,12 @@
                     fetchFleet();
                 };
 
+                // NEW: Smart Add Document Function
+                const openAddDocForCar = (carId) => {
+                    newDoc.value = { carId: carId, type: '', expiry: '' };
+                    showDocModal.value = true;
+                };
+
                 const submitDoc = async () => {
                     await supabaseClient.from('documents').insert([{ car_id: newDoc.value.carId, type: newDoc.value.type, expiry_date: newDoc.value.expiry }]);
                     newDoc.value = { carId: '', type: '', expiry: '' };
@@ -831,7 +843,7 @@
                     activeTab, cars, filteredCars, searchQuery, documents, drivers, getCarDocuments, getDriver, getCarsByDriver,
                     showProfileModal, showCarModal, showDocModal, showDriverModal, 
                     showEditCarModal, showEditDocModal, showEditDriverModal,
-                    submitCar, submitDoc, submitDriver, 
+                    submitCar, submitDoc, submitDriver, openAddDocForCar,
                     updateCar, updateDoc, updateDriver, 
                     deleteCar, deleteDoc, deleteDriver, 
                     openEditCar, openEditDoc, openEditDriver, openProfileModal,
