@@ -155,6 +155,17 @@
 
                 <!-- TAB CONTENT: FLEET REGISTRY -->
                 <div v-if="activeTab === 'fleet'">
+                    
+                    <!-- VEHICLE SEARCH BAR -->
+                    <div v-if="cars.length > 0" class="mb-6 relative">
+                        <input type="text" v-model="searchQuery" placeholder="Search by vehicle name or plate number..." class="w-full pl-12 pr-10 py-3.5 bg-white dark:bg-stone-800 border border-stone-200/60 dark:border-stone-700 rounded-2xl outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition shadow-sm" />
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                        <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-white text-lg font-bold transition">&times;</button>
+                    </div>
+
+                    <!-- EMPTY FLEET STATE -->
                     <div v-if="cars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 dark:border-stone-700 mb-10">
                         <div class="text-center">
                             <h2 class="text-2xl font-bold text-stone-900 dark:text-white mb-2">No Vehicles Yet</h2>
@@ -163,8 +174,17 @@
                         </div>
                     </div>
 
+                    <!-- NO SEARCH RESULTS STATE -->
+                    <div v-else-if="filteredCars.length === 0" class="flex items-center justify-center p-12 glass rounded-3xl border border-stone-200/50 dark:border-stone-700 mb-10">
+                        <div class="text-center">
+                            <h2 class="text-xl font-bold text-stone-900 dark:text-white mb-1">No Matching Vehicles</h2>
+                            <p class="text-stone-500 dark:text-stone-400 text-sm">No vehicles found matching "{{ searchQuery }}".</p>
+                        </div>
+                    </div>
+
+                    <!-- CARS GRID -->
                     <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                        <div v-for="car in cars" :key="car.id" class="bg-white dark:bg-stone-800 rounded-3xl border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none overflow-hidden flex flex-col transition-colors">
+                        <div v-for="car in filteredCars" :key="car.id" class="bg-white dark:bg-stone-800 rounded-3xl border border-stone-200/60 dark:border-stone-700 shadow-lg shadow-stone-200/20 dark:shadow-none overflow-hidden flex flex-col transition-colors">
                             <div class="bg-stone-900 dark:bg-black p-8 text-white flex flex-col">
                                 <div class="flex justify-between items-start mb-4">
                                     <div>
@@ -284,7 +304,7 @@
                     <div class="flex items-center gap-4">
                         <a :href="'mailto:' + contactHelpEmail" class="text-stone-400 hover:text-stone-900 dark:hover:text-white text-sm font-bold transition">Contact Help</a>
                         <span class="text-stone-300 dark:text-stone-600">|</span>
-                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.2.0</span>
+                        <span class="text-stone-400 dark:text-stone-600 text-sm">v1.3.0</span>
                     </div>
                 </footer>
             </div>
@@ -429,7 +449,7 @@
         // ==========================================
         // UPDATE YOUR EMAIL HERE
         // ==========================================
-        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com'; // <-- Put your help email here
+         const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';// <-- Put your help email here
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
@@ -456,6 +476,9 @@
                 const selectedCountryCode = ref('+234');
                 const localPhoneNumber = ref('');
                 
+                // Search State
+                const searchQuery = ref('');
+
                 // Navigation
                 const activeTab = ref('fleet'); 
                 const contactHelpEmail = ref(CONTACT_HELP_EMAIL);
@@ -493,7 +516,6 @@
                 // ON MOUNT (THEME & SESSION RESTORE)
                 // ==========================================
                 onMounted(() => {
-                    // Check local storage for Theme
                     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         isDarkMode.value = true;
                         document.documentElement.classList.add('dark');
@@ -502,7 +524,6 @@
                         document.documentElement.classList.remove('dark');
                     }
 
-                    // Check local storage to keep user logged in
                     const savedSession = localStorage.getItem('otracker_user');
                     if (savedSession) {
                         currentUser.value = JSON.parse(savedSession);
@@ -523,7 +544,7 @@
                 };
 
                 // ==========================================
-                // HELPER FUNCTIONS
+                // HELPER & COMPUTED FUNCTIONS
                 // ==========================================
                 const isExpiringSoon = (expiryDateStr) => {
                     if (!expiryDateStr) return false;
@@ -537,6 +558,17 @@
 
                 const getDriver = (driverId) => drivers.value.find(d => d.id === driverId);
                 const getCarsByDriver = (driverId) => cars.value.filter(c => c.driver_id === driverId);
+
+                // --- SEARCH COMPUTED PROPERTY ---
+                const filteredCars = computed(() => {
+                    if (!searchQuery.value.trim()) return cars.value;
+                    const query = searchQuery.value.toLowerCase().trim();
+                    return cars.value.filter(car => {
+                        const matchName = car.name ? car.name.toLowerCase().includes(query) : false;
+                        const matchPlate = car.plate_number ? car.plate_number.toLowerCase().includes(query) : false;
+                        return matchName || matchPlate;
+                    });
+                });
 
                 // --- METRICS ---
                 const totalVehicles = computed(() => cars.value.length);
@@ -569,7 +601,6 @@
                     let phoneFormat = '';
                     let emailFormat = '';
 
-                    // Clean and build the correct credentials based on the toggle
                     if (usePhoneAuth.value) {
                         let cleanPhone = localPhoneNumber.value.replace(/^0+/, '').replace(/[^0-9]/g, '');
                         phoneFormat = selectedCountryCode.value + cleanPhone;
@@ -586,12 +617,11 @@
                             authError.value = "Invalid credentials. Please try again.";
                         } else {
                             currentUser.value = data;
-                            localStorage.setItem('otracker_user', JSON.stringify(data)); // Save session
+                            localStorage.setItem('otracker_user', JSON.stringify(data));
                             isLoggedIn.value = true;
                             fetchFleet();
                         }
                     } else {
-                        // Registration logic
                         const { data, error } = await supabaseClient
                             .from('users')
                             .insert([{
@@ -621,6 +651,7 @@
                     cars.value = [];
                     documents.value = [];
                     drivers.value = [];
+                    searchQuery.value = '';
                 };
 
                 const openProfileModal = () => {
@@ -647,8 +678,8 @@
                         if (error) throw error;
 
                         alert("Profile settings saved successfully!");
-                        currentUser.value = data; // Update local state
-                        localStorage.setItem('otracker_user', JSON.stringify(data)); // Update stored state
+                        currentUser.value = data;
+                        localStorage.setItem('otracker_user', JSON.stringify(data));
                         showProfileModal.value = false;
                     } catch (error) {
                         alert("Error saving profile: " + error.message);
@@ -659,14 +690,12 @@
                     if (!confirm("Are you ABSOLUTELY sure? This deletes everything permanently.")) return;
                     
                     try {
-                        // Cascade delete manually
                         if (cars.value.length > 0) {
                             await supabaseClient.from('documents').delete().in('car_id', cars.value.map(c => c.id));
                         }
                         await supabaseClient.from('cars').delete().eq('owner_id', currentUser.value.id);
                         await supabaseClient.from('drivers').delete().eq('owner_id', currentUser.value.id);
                         
-                        // Delete user profile
                         const { error } = await supabaseClient.from('users').delete().eq('id', currentUser.value.id);
                         if (error) throw error;
 
@@ -799,7 +828,7 @@
 
                 return { 
                     isLoggedIn, isLoginMode, isLoading, handleAuth, logout, 
-                    activeTab, cars, documents, drivers, getCarDocuments, getDriver, getCarsByDriver,
+                    activeTab, cars, filteredCars, searchQuery, documents, drivers, getCarDocuments, getDriver, getCarsByDriver,
                     showProfileModal, showCarModal, showDocModal, showDriverModal, 
                     showEditCarModal, showEditDocModal, showEditDriverModal,
                     submitCar, submitDoc, submitDriver, 
