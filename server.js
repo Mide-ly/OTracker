@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const twilio = require('twilio');
-const cron = require('node-cron');
 const nodemailer = require('nodemailer');
 
 const app = express();
@@ -18,65 +17,69 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
 });
 
-cron.schedule('0 8 * * *', async () => {
-    console.log('Running daily expiry check...');
+// THE NEW TRIGGER ENDPOINT
+app.get('/api/run-reminders', async (req, res) => {
+    console.log('Reminders triggered by cron-job.org...');
+    let alertsSent = 0;
 
-    const today = new Date();
-    const addDays = (days) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() + days);
-        return d.toISOString().split('T')[0];
-    };
+    try {
+        const today = new Date();
+        const addDays = (days) => {
+            const d = new Date(today);
+            d.setDate(d.getDate() + days);
+            return d.toISOString().split('T')[0];
+        };
 
-    const todayStr = addDays(0);
-    const nextMonthStr = addDays(30);
+        const todayStr = addDays(0);
+        const nextMonthStr = addDays(30);
 
-    const { data: documents, error } = await supabase
-        .from('documents')
-        .select('*')
-        .or(`expiry_date.eq.${todayStr},expiry_date.eq.${nextMonthStr}`);
+        const { data: documents, error } = await supabase
+            .from('documents')
+            .select('*')
+            .or(`expiry_date.eq.${todayStr},expiry_date.eq.${nextMonthStr}`);
 
-    if (error || !documents || documents.length === 0) return;
+        if (error) throw error;
 
-    for (const doc of documents) {
-        try {
-            // Fetch the car linked to the document
-            const { data: car } = await supabase.from('cars').select('*').eq('id', doc.car_id).single();
-            if (!car) continue;
+        if (documents && documents.length > 0) {
+            for (const doc of documents) {
+                const { data: car } = await supabase.from('cars').select('*').eq('id', doc.car_id).single();
+                if (!car) continue;
 
-            // Fetch the specific user who owns the car
-            const { data: owner } = await supabase.from('users').select('*').eq('id', car.owner_id).single();
-            if (!owner) continue;
+                const { data: owner } = await supabase.from('users').select('*').eq('id', car.owner_id).single();
+                if (!owner) continue;
 
-            const userEmail = owner.email;
-            const userPhone = owner.phone_number;
-            const vehicleName = `${car.name} (${car.plate_number})`;
-            const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
+                const userEmail = owner.email;
+                const userPhone = owner.phone_number;
+                const vehicleName = `${car.name} (${car.plate_number})`;
+                const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
 
-            if (userPhone && userPhone.trim() !== '') {
-                await twilioClient.messages.create({
-                    body: messageText,
-                    from: 'whatsapp:+14155238886', 
-                    to: `whatsapp:${userPhone}` 
-                });
+                if (userPhone && userPhone.trim() !== '') {
+                    await twilioClient.messages.create({
+                        body: messageText,
+                        from: 'whatsapp:+14155238886', // Make sure this matches your Twilio WhatsApp sender
+                        to: `whatsapp:${userPhone}` 
+                    });
+                    alertsSent++;
+                }
+
+                if (userEmail && userEmail.trim() !== '') {
+                    await transporter.sendMail({
+                        from: `"OTracker Alerts" <${process.env.EMAIL_USER}>`,
+                        to: userEmail,
+                        subject: `Document Expiry Alert: ${vehicleName}`,
+                        text: messageText,
+                    });
+                    alertsSent++;
+                }
             }
-
-            if (userEmail && userEmail.trim() !== '') {
-                await transporter.sendMail({
-                    from: `"OTracker Alerts" <${process.env.EMAIL_USER}>`,
-                    to: userEmail,
-                    subject: `Document Expiry Alert: ${vehicleName}`,
-                    text: messageText,
-                });
-            }
-        } catch (err) {
-            console.error("Alert Loop Error:", err.message);
         }
+        
+        // This tiny response prevents the "Output too large" error!
+        res.status(200).send(`OK. ${alertsSent} alerts sent.`);
+    } catch (err) {
+        console.error("Alert Loop Error:", err.message);
+        res.status(500).send("Error.");
     }
-});
-
-app.get('/api/test-reminders', async (req, res) => {
-    res.send("<h1>Backend Running!</h1><p>Automated reminders are active.</p>");
 });
 
 app.listen(port, () => console.log(`OTracker Backend is running on port ${port}`));
