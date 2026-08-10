@@ -1,23 +1,44 @@
 require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const twilio = require('twilio');
 const nodemailer = require('nodemailer');
+// 1. Import the WhatsApp Web and QR libraries
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
 
 const app = express();
 const port = process.env.PORT || 3000;
-
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
 });
 
-// THE NEW TRIGGER ENDPOINT
+// 2. Initialize the WhatsApp Web Client
+// LocalAuth saves your session so you don't have to scan the QR code every time the server restarts
+const whatsappClient = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for running on cloud servers like Render
+    }
+});
+
+// 3. Generate the QR code in your terminal
+whatsappClient.on('qr', (qr) => {
+    console.log('Scan this QR code with your WhatsApp to link your server:');
+    qrcode.generate(qr, { small: true });
+});
+
+whatsappClient.on('ready', () => {
+    console.log('WhatsApp Web Client is ready and connected!');
+});
+
+// Start the WhatsApp Client
+whatsappClient.initialize();
+
+// THE TRIGGER ENDPOINT
 app.get('/api/run-reminders', async (req, res) => {
     console.log('Reminders triggered by cron-job.org...');
     let alertsSent = 0;
@@ -49,16 +70,15 @@ app.get('/api/run-reminders', async (req, res) => {
                 if (!owner) continue;
 
                 const userEmail = owner.email;
-                const userPhone = owner.phone_number;
+                let userPhone = owner.phone_number;
                 const vehicleName = `${car.name} (${car.plate_number})`;
                 const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
 
+                // 4. Send the message via your personal WhatsApp
                 if (userPhone && userPhone.trim() !== '') {
-                    await twilioClient.messages.create({
-                        body: messageText,
-                        from: 'whatsapp:+14155238886', // Make sure this matches your Twilio WhatsApp sender
-                        to: `whatsapp:${userPhone}` 
-                    });
+                    // whatsapp-web.js requires the exact format: 2348000000000@c.us
+                    let cleanPhone = userPhone.replace(/[^0-9]/g, '') + "@c.us"; 
+                    await whatsappClient.sendMessage(cleanPhone, messageText);
                     alertsSent++;
                 }
 
@@ -74,7 +94,6 @@ app.get('/api/run-reminders', async (req, res) => {
             }
         }
         
-        // This tiny response prevents the "Output too large" error!
         res.status(200).send(`OK. ${alertsSent} alerts sent.`);
     } catch (err) {
         console.error("Alert Loop Error:", err.message);
