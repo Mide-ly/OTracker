@@ -18,8 +18,6 @@ const transporter = nodemailer.createTransport({
 
 // ==========================================
 // 2. PUT YOUR WHATSAPP NUMBER HERE
-// Format: Country code + number (NO plus sign)
-// Example: "2348012345678"
 // ==========================================
 const BOT_NUMBER = "2348022833007"; 
 
