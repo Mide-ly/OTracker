@@ -193,4 +193,34 @@ app.get('/api/test-whatsapp', async (req, res) => {
     res.status(ok ? 200 : 500).send(ok ? 'WhatsApp test sent! Check your phone.' : 'Failed — check Render logs for the error from Meta.');
 });
 
+// ============================================
+// DEBUG — shows exactly what the reminder logic sees. Remove before production.
+// ============================================
+app.get('/api/debug-reminders', async (req, res) => {
+    try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const d = new Date(); d.setDate(d.getDate() + 30);
+        const nextMonthStr = d.toISOString().split('T')[0];
+
+        const { data: documents, error } = await supabase
+            .from('documents').select('*')
+            .gte('expiry_date', todayStr).lte('expiry_date', nextMonthStr);
+        if (error) throw error;
+
+        const report = { today: todayStr, window_end: nextMonthStr, docs_in_window: documents.length, docs: [] };
+
+        for (const doc of documents) {
+            const daysLeft = Math.round((new Date(doc.expiry_date + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86400000);
+            const wouldAlert = daysLeft <= 7 ? true : daysLeft <= 14 ? daysLeft % 2 === 0 : daysLeft % 5 === 0;
+            const { data: car } = await supabase.from('cars').select('*').eq('id', doc.car_id).single();
+            const { data: owner } = car ? await supabase.from('users').select('email, phone_number').eq('id', car.owner_id).single() : { data: null };
+            report.docs.push({
+                type: doc.type, expiry_date: doc.expiry_date, daysLeft, wouldAlert,
+                car_found: !!car, owner_found: !!owner,
+                owner_email: owner?.email || null, owner_phone: owner?.phone_number || null
+            });
+        }
+        res.json(report);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 app.listen(port, () => console.log(`OTracker Backend is running on port ${port}`));
