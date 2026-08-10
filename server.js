@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
-// 1. Import the lightweight Baileys library
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const pino = require('pino'); // <-- 1. Imports the log silencer
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,14 +17,13 @@ const transporter = nodemailer.createTransport({
 
 let whatsappSocket;
 
-// 2. Initialize the WhatsApp Socket Connection
 async function connectToWhatsApp() {
-    // Saves your session so you don't have to scan the QR code on every restart
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     
     whatsappSocket = makeWASocket({
         auth: state,
-        printQRInTerminal: true // Automatically prints the QR code to your Render logs!
+        printQRInTerminal: true,
+        logger: pino({ level: 'silent' }) // <-- 2. MUTES THE MASSIVE LOG FLOOD!
     });
 
     whatsappSocket.ev.on('creds.update', saveCreds);
@@ -43,8 +42,12 @@ async function connectToWhatsApp() {
     });
 }
 
-// Start the connection
 connectToWhatsApp();
+
+// 3. Keep-Awake Route
+app.get('/', (req, res) => {
+    res.send("OTracker Server is Awake!");
+});
 
 // THE TRIGGER ENDPOINT
 app.get('/api/run-reminders', async (req, res) => {
@@ -82,9 +85,7 @@ app.get('/api/run-reminders', async (req, res) => {
                 const vehicleName = `${car.name} (${car.plate_number})`;
                 const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
 
-                // 3. Send the message via your linked WhatsApp account
                 if (userPhone && userPhone.trim() !== '') {
-                    // Baileys requires the format: 2348000000000@s.whatsapp.net
                     let cleanPhone = userPhone.replace(/[^0-9]/g, '') + "@s.whatsapp.net"; 
                     if (whatsappSocket) {
                         await whatsappSocket.sendMessage(cleanPhone, { text: messageText });
