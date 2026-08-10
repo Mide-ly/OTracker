@@ -2,9 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
+// 1. Notice we removed qrcode-terminal
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const pino = require('pino');
-const qrcode = require('qrcode-terminal'); // <-- We brought this back!
+const pino = require('pino'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -16,6 +16,13 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
 });
 
+// ==========================================
+// 2. PUT YOUR WHATSAPP NUMBER HERE
+// Format: Country code + number (NO plus sign)
+// Example: "2348012345678"
+// ==========================================
+const BOT_NUMBER = "2348022833007"; 
+
 let whatsappSocket;
 
 async function connectToWhatsApp() {
@@ -23,23 +30,31 @@ async function connectToWhatsApp() {
     
     whatsappSocket = makeWASocket({
         auth: state,
-        logger: pino({ level: 'silent' }) 
+        logger: pino({ level: 'silent' }), 
+        printQRInTerminal: false, // <-- Turn off the QR code
+        browser: ['OTracker', 'Chrome', '1.0.0'] // Standardizes the connection for pairing
     });
 
     whatsappSocket.ev.on('creds.update', saveCreds);
 
-    // Watch the connection stream for the QR code
-    whatsappSocket.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        // If a QR code is generated, force it to print
-        if (qr) {
-            console.log('==================================================');
-            console.log('Scan this QR code with your WhatsApp to link your server:');
-            qrcode.generate(qr, { small: true });
-            console.log('==================================================');
-        }
+    // 3. Request the 8-Digit Pairing Code
+    if (!state.creds.registered) {
+        setTimeout(async () => {
+            try {
+                const code = await whatsappSocket.requestPairingCode(BOT_NUMBER);
+                console.log('\n==================================================');
+                console.log(`🔑 YOUR PAIRING CODE IS: ${code}`);
+                console.log('Open WhatsApp > Linked Devices > Link with phone number instead');
+                console.log('==================================================\n');
+            } catch (err) {
+                console.error('Failed to request pairing code:', err);
+            }
+        }, 3000); // 3-second delay ensures the connection is ready before requesting
+    }
 
+    whatsappSocket.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connection closed, reconnecting:', shouldReconnect);
