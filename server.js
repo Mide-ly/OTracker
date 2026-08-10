@@ -49,7 +49,7 @@ async function connectToWhatsApp() {
             } catch (err) {
                 console.error('Failed to request pairing code:', err);
             }
-        }, 3000); // 3-second delay ensures the connection is ready before requesting
+        }, 8000); // 8-second delay ensures the connection is ready before requesting
     }
 
     whatsappSocket.ev.on('connection.update', (update) => {
