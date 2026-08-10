@@ -3,7 +3,8 @@ const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const pino = require('pino'); // <-- 1. Imports the log silencer
+const pino = require('pino');
+const qrcode = require('qrcode-terminal'); // <-- We brought this back!
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,14 +23,23 @@ async function connectToWhatsApp() {
     
     whatsappSocket = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
-        logger: pino({ level: 'silent' }) // <-- 2. MUTES THE MASSIVE LOG FLOOD!
+        logger: pino({ level: 'silent' }) 
     });
 
     whatsappSocket.ev.on('creds.update', saveCreds);
 
+    // Watch the connection stream for the QR code
     whatsappSocket.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+        
+        // If a QR code is generated, force it to print
+        if (qr) {
+            console.log('==================================================');
+            console.log('Scan this QR code with your WhatsApp to link your server:');
+            qrcode.generate(qr, { small: true });
+            console.log('==================================================');
+        }
+
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             console.log('Connection closed, reconnecting:', shouldReconnect);
@@ -44,7 +54,7 @@ async function connectToWhatsApp() {
 
 connectToWhatsApp();
 
-// 3. Keep-Awake Route
+// Keep-Awake Route
 app.get('/', (req, res) => {
     res.send("OTracker Server is Awake!");
 });
