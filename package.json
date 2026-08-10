@@ -1,20 +1,18 @@
 {
   "name": "car-document-reminder-backend",
-  "version": "1.0.0",
-  "description": "Automated WhatsApp reminder engine for OTracker",
+  "version": "2.0.0",
+  "description": "Automated WhatsApp + Email reminder engine for OTracker (Meta Cloud API)",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.40.0",
-    "@whiskeysockets/baileys": "^7.0.0-rc14",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "node-cron": "^4.6.0",
-    "nodemailer": "^9.0.3",
-    "pino": "^10.3.1",
-    "qrcode-terminal": "^0.12.0",
-    "twilio": "^5.0.0"
+    "nodemailer": "^9.0.3"
   }
 }

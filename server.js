@@ -2,79 +2,97 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
-// 1. Notice we removed qrcode-terminal
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const pino = require('pino'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json());
 
+// ============================================
+// CLIENTS
+// ============================================
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
+    service: 'gmail',
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
 });
 
-// =========================================
-// 2. PUT YOUR WHATSAPP NUMBER HERE
-// Format: Country code + number (NO plus sign)
-// Example: "2348012345678"
-// =========================================
-const BOT_NUMBER = "2348022833007"; 
+// ============================================
+// WHATSAPP (Meta Cloud API)
+// Env vars needed:
+//   WA_ACCESS_TOKEN     -> from Meta App Dashboard > WhatsApp > API Setup
+//   WA_PHONE_NUMBER_ID  -> same page (this is the ID, NOT the phone number itself)
+//   WA_TEMPLATE_NAME    -> your approved template name (default below)
+// ============================================
+const WA_API_URL = `https://graph.facebook.com/v21.0/${process.env.WA_PHONE_NUMBER_ID}/messages`;
+const WA_TEMPLATE_NAME = process.env.WA_TEMPLATE_NAME || 'document_expiry_alert';
 
-let whatsappSocket;
-
-async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-    
-    whatsappSocket = makeWASocket({
-        auth: state,
-        logger: pino({ level: 'silent' }), 
-        printQRInTerminal: false, // <-- Turn off the QR code
-        browser: ['OTracker', 'Chrome', '1.0.0'] // Standardizes the connection for pairing
-    });
-
-    whatsappSocket.ev.on('creds.update', saveCreds);
-
-    // 3. Request the 8-Digit Pairing Code
-    if (!state.creds.registered) {
-        setTimeout(async () => {
-            try {
-                const code = await whatsappSocket.requestPairingCode(BOT_NUMBER);
-                console.log('\n==================================================');
-                console.log(`🔑 YOUR PAIRING CODE IS: ${code}`);
-                console.log('Open WhatsApp > Linked Devices > Link with phone number instead');
-                console.log('==================================================\n');
-            } catch (err) {
-                console.error('Failed to request pairing code:', err);
-            }
-        }, 8000); // 8-second delay ensures the connection is ready before requesting
-    }
-
-    whatsappSocket.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
-        
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Connection closed, reconnecting:', shouldReconnect);
-            if (shouldReconnect) {
-                connectToWhatsApp();
-            }
-        } else if (connection === 'open') {
-            console.log('WhatsApp Web Client is ready and connected!');
-        }
-    });
+/**
+ * Normalizes Nigerian phone numbers to Cloud API format.
+ * "0803 123 4567"  -> "2348031234567"
+ * "+2348031234567" -> "2348031234567"
+ * Returns null if the number looks unusable.
+ */
+function normalizePhone(raw) {
+    if (!raw) return null;
+    let digits = raw.replace(/[^0-9]/g, '');
+    if (digits.startsWith('0')) digits = '234' + digits.slice(1);
+    if (digits.length < 10) return null;
+    return digits;
 }
 
-connectToWhatsApp();
+/**
+ * Sends one expiry alert via WhatsApp template message.
+ * Template body expected: "⚠️ OTracker Alert: The {{1}} for your {{2}} expires {{3}}. ..."
+ * ({{3}} receives a phrase like "in 5 days (2026-09-09)" or "TODAY (2026-08-10)")
+ */
+async function sendWhatsAppAlert(phone, docType, vehicleName, expiryPhrase) {
+    const to = normalizePhone(phone);
+    if (!to) return false;
 
-// Keep-Awake Route
+    const response = await fetch(WA_API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.WA_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            to: to,
+            type: 'template',
+            template: {
+                name: WA_TEMPLATE_NAME,
+                language: { code: 'en' },
+                components: [{
+                    type: 'body',
+                    parameters: [
+                        { type: 'text', text: docType },
+                        { type: 'text', text: vehicleName },
+                        { type: 'text', text: expiryPhrase }
+                    ]
+                }]
+            }
+        })
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+        console.error('WhatsApp send failed:', JSON.stringify(result.error || result));
+        return false;
+    }
+    return true;
+}
+
+// ============================================
+// KEEP-AWAKE ROUTE (pinged by cron-job.org to avoid Render cold starts)
+// ============================================
 app.get('/', (req, res) => {
-    res.send("OTracker Server is Awake!");
+    res.send('OTracker Server is Awake!');
 });
 
+// ============================================
 // THE TRIGGER ENDPOINT
+// ============================================
 app.get('/api/run-reminders', async (req, res) => {
     console.log('Reminders triggered by cron-job.org...');
     let alertsSent = 0;
@@ -90,38 +108,63 @@ app.get('/api/run-reminders', async (req, res) => {
         const todayStr = addDays(0);
         const nextMonthStr = addDays(30);
 
+        // Fetch everything expiring within the next 30 days (inclusive)
         const { data: documents, error } = await supabase
             .from('documents')
             .select('*')
-            .or(`expiry_date.eq.${todayStr},expiry_date.eq.${nextMonthStr}`);
+            .gte('expiry_date', todayStr)
+            .lte('expiry_date', nextMonthStr);
 
         if (error) throw error;
 
+        /**
+         * Tiered alert schedule (cron runs once daily):
+         *   30 down to 15 days left -> every 5 days  (30, 25, 20, 15)
+         *   14 down to  8 days left -> every 2 days  (14, 12, 10, 8)
+         *    7 down to  0 days left -> every day     (7, 6, 5, 4, 3, 2, 1, 0)
+         */
+        const shouldAlert = (daysLeft) => {
+            if (daysLeft < 0) return false;
+            if (daysLeft <= 7) return true;
+            if (daysLeft <= 14) return daysLeft % 2 === 0;
+            if (daysLeft <= 30) return daysLeft % 5 === 0;
+            return false;
+        };
+
+        const daysUntil = (expiryStr) => {
+            const expiry = new Date(expiryStr + 'T00:00:00');
+            const now = new Date(todayStr + 'T00:00:00');
+            return Math.round((expiry - now) / (1000 * 60 * 60 * 24));
+        };
+
         if (documents && documents.length > 0) {
             for (const doc of documents) {
+                const daysLeft = daysUntil(doc.expiry_date);
+                if (!shouldAlert(daysLeft)) continue;
+
                 const { data: car } = await supabase.from('cars').select('*').eq('id', doc.car_id).single();
                 if (!car) continue;
 
                 const { data: owner } = await supabase.from('users').select('*').eq('id', car.owner_id).single();
                 if (!owner) continue;
 
-                const userEmail = owner.email;
-                let userPhone = owner.phone_number;
                 const vehicleName = `${car.name} (${car.plate_number})`;
-                const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
+                const expiryPhrase = daysLeft === 0
+                    ? `TODAY (${doc.expiry_date})`
+                    : `in ${daysLeft} day${daysLeft === 1 ? '' : 's'} (${doc.expiry_date})`;
+                const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires ${expiryPhrase}. Please renew it to stay road-legal.`;
 
-                if (userPhone && userPhone.trim() !== '') {
-                    let cleanPhone = userPhone.replace(/[^0-9]/g, '') + "@s.whatsapp.net"; 
-                    if (whatsappSocket) {
-                        await whatsappSocket.sendMessage(cleanPhone, { text: messageText });
-                        alertsSent++;
-                    }
+                // --- WhatsApp (Meta Cloud API) ---
+                if (owner.phone_number && owner.phone_number.trim() !== '') {
+                    const ok = await sendWhatsAppAlert(owner.phone_number, doc.type, vehicleName, expiryPhrase);
+                    if (ok) alertsSent++;
                 }
 
-                if (userEmail && userEmail.trim() !== '') {
+                // --- Email ---
+                if (owner.email && owner.email.trim() !== '') {
                     await transporter.sendMail({
                         from: `"OTracker Alerts" <${process.env.EMAIL_USER}>`,
-                        to: userEmail,
+                        to: owner.email,
                         subject: `Document Expiry Alert: ${vehicleName}`,
                         text: messageText,
                     });
@@ -129,12 +172,25 @@ app.get('/api/run-reminders', async (req, res) => {
                 }
             }
         }
-        
+
         res.status(200).send(`OK. ${alertsSent} alerts sent.`);
     } catch (err) {
-        console.error("Alert Loop Error:", err.message);
-        res.status(500).send("Error.");
+        console.error('Alert Loop Error:', err.message);
+        res.status(500).send('Error.');
     }
+});
+
+// ============================================
+// TEST ENDPOINT — send yourself one WhatsApp message to verify setup.
+// Usage: /api/test-whatsapp?to=2348031234567
+// Remove or protect this route before going to production.
+// ============================================
+app.get('/api/test-whatsapp', async (req, res) => {
+    const to = req.query.to;
+    if (!to) return res.status(400).send('Add ?to=234XXXXXXXXXX to the URL.');
+
+    const ok = await sendWhatsAppAlert(to, 'Insurance', 'Test Car (ABC-123-XY)', 'in 30 days (2026-09-09)');
+    res.status(ok ? 200 : 500).send(ok ? 'WhatsApp test sent! Check your phone.' : 'Failed — check Render logs for the error from Meta.');
 });
 
 app.listen(port, () => console.log(`OTracker Backend is running on port ${port}`));
