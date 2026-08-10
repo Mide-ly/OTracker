@@ -2,9 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
-// 1. Import the WhatsApp Web and QR libraries
-const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+// 1. Import the lightweight Baileys library
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -16,27 +15,36 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_APP_PASSWORD }
 });
 
-// 2. Initialize the WhatsApp Web Client
-// LocalAuth saves your session so you don't have to scan the QR code every time the server restarts
-const whatsappClient = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for running on cloud servers like Render
-    }
-});
+let whatsappSocket;
 
-// 3. Generate the QR code in your terminal
-whatsappClient.on('qr', (qr) => {
-    console.log('Scan this QR code with your WhatsApp to link your server:');
-    qrcode.generate(qr, { small: true });
-});
+// 2. Initialize the WhatsApp Socket Connection
+async function connectToWhatsApp() {
+    // Saves your session so you don't have to scan the QR code on every restart
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    
+    whatsappSocket = makeWASocket({
+        auth: state,
+        printQRInTerminal: true // Automatically prints the QR code to your Render logs!
+    });
 
-whatsappClient.on('ready', () => {
-    console.log('WhatsApp Web Client is ready and connected!');
-});
+    whatsappSocket.ev.on('creds.update', saveCreds);
 
-// Start the WhatsApp Client
-whatsappClient.initialize();
+    whatsappSocket.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('Connection closed, reconnecting:', shouldReconnect);
+            if (shouldReconnect) {
+                connectToWhatsApp();
+            }
+        } else if (connection === 'open') {
+            console.log('WhatsApp Web Client is ready and connected!');
+        }
+    });
+}
+
+// Start the connection
+connectToWhatsApp();
 
 // THE TRIGGER ENDPOINT
 app.get('/api/run-reminders', async (req, res) => {
@@ -74,12 +82,14 @@ app.get('/api/run-reminders', async (req, res) => {
                 const vehicleName = `${car.name} (${car.plate_number})`;
                 const messageText = `⚠️ OTracker Alert: The ${doc.type} for your ${vehicleName} expires on ${doc.expiry_date}.`;
 
-                // 4. Send the message via your personal WhatsApp
+                // 3. Send the message via your linked WhatsApp account
                 if (userPhone && userPhone.trim() !== '') {
-                    // whatsapp-web.js requires the exact format: 2348000000000@c.us
-                    let cleanPhone = userPhone.replace(/[^0-9]/g, '') + "@c.us"; 
-                    await whatsappClient.sendMessage(cleanPhone, messageText);
-                    alertsSent++;
+                    // Baileys requires the format: 2348000000000@s.whatsapp.net
+                    let cleanPhone = userPhone.replace(/[^0-9]/g, '') + "@s.whatsapp.net"; 
+                    if (whatsappSocket) {
+                        await whatsappSocket.sendMessage(cleanPhone, { text: messageText });
+                        alertsSent++;
+                    }
                 }
 
                 if (userEmail && userEmail.trim() !== '') {
