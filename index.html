@@ -257,7 +257,7 @@
                                                 </div>
                                             </td>
 
-                                            <td class="py-4 text-right font-mono transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-stone-500 dark:text-stone-400'">
+                                            <td class="py-4 text-right font-mono whitespace-nowrap transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-stone-500 dark:text-stone-400'">
                                                 {{ doc.expiry_date }}
                                             </td>
                                             <td class="py-4 text-right pl-2">
@@ -371,9 +371,9 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">WhatsApp Notifications</label>
+                        <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5">Phone Number</label>
                         <input type="text" v-model="profilePhone" placeholder="+2348000000000" class="w-full p-4 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 outline-none focus:ring-2 focus:ring-stone-900 dark:focus:ring-stone-400 dark:text-white transition">
-                        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2 font-medium">Include country code for Twilio reminders.</p>
+                        <p class="text-xs text-stone-400 dark:text-stone-500 mt-2 font-medium">Your contact phone number.</p>
                     </div>
 
                     <div class="flex items-center gap-2 pt-2 pb-2">
