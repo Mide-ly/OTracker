@@ -11,7 +11,6 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
-    <!-- Configures Tailwind to support manual Dark Mode toggling -->
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
@@ -23,7 +22,6 @@
         .dark .glass { background: rgba(28, 25, 23, 0.7); border-color: rgba(68, 64, 60, 0.5); }
         [v-cloak] { display: none; }
         
-        /* Custom file input styling */
         input[type="file"]::file-selector-button {
             border: none;
             background: #e7e5e4;
@@ -35,10 +33,7 @@
             margin-right: 12px;
             transition: all 0.2s;
         }
-        .dark input[type="file"]::file-selector-button {
-            background: #44403c;
-            color: #e7e5e4;
-        }
+        .dark input[type="file"]::file-selector-button { background: #44403c; color: #e7e5e4; }
         input[type="file"]::file-selector-button:hover { background: #d6d3d1; }
         .dark input[type="file"]::file-selector-button:hover { background: #57534e; }
     </style>
@@ -309,7 +304,8 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
                             </div>
                             <h3 class="text-lg font-bold text-stone-900 dark:text-white">{{ driver.name }}</h3>
-                            <p class="text-sm font-medium text-stone-500 dark:text-stone-400 mb-4">{{ driver.phone }}</p>
+                            <p class="text-sm font-medium text-stone-500 dark:text-stone-400" :class="!driver.email ? 'mb-4' : 'mb-1'">{{ driver.phone }}</p>
+                            <p v-if="driver.email" class="text-xs font-medium text-indigo-500 dark:text-indigo-400 mb-4">{{ driver.email }}</p>
                             
                             <div class="text-xs uppercase tracking-widest font-bold text-stone-400 dark:text-stone-500 mb-1">License Expiry</div>
                             <div class="font-mono mb-4" :class="isExpiringSoon(driver.license_expiry) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-stone-700 dark:text-stone-300'">
@@ -343,7 +339,7 @@
             </div>
         </div>
 
-        <!-- NEW PROFILE SETTINGS MODAL -->
+        <!-- PROFILE MODAL -->
         <div v-if="showProfileModal" class="fixed inset-0 bg-stone-900/40 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div class="bg-white dark:bg-stone-800 p-8 rounded-3xl shadow-2xl max-w-md w-full relative max-h-[90vh] overflow-y-auto">
                 <button @click="showProfileModal = false" class="absolute top-4 right-4 text-stone-400 hover:text-stone-900 dark:hover:text-white text-xl font-bold">&times;</button>
@@ -424,7 +420,6 @@
                     <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
                 </select>
                 
-                <!-- NEW SMART INPUT WITH DATALIST -->
                 <input list="addDocTypes" v-model="newDoc.type" placeholder="Document Type (e.g. Insurance)" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
                 <datalist id="addDocTypes">
                     <option v-for="t in uniqueDocumentTypes" :key="t" :value="t"></option>
@@ -446,6 +441,10 @@
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Add Driver</h3>
                 <input v-model="newDriver.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
                 <input type="tel" v-model="newDriver.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                
+                <!-- NEW EMAIL FIELD -->
+                <input type="email" v-model="newDriver.email" placeholder="Email Address (Optional)" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                
                 <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
                 <input type="date" v-model="newDriver.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
                 <button @click="submitDriver" class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold hover:bg-indigo-600 transition">Save Driver</button>
@@ -479,7 +478,6 @@
 
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Document</h3>
                 
-                <!-- NEW SMART INPUT WITH DATALIST -->
                 <input list="editDocTypes" v-model="editDocData.type" placeholder="Document Type" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-amber-500 dark:text-white" />
                 <datalist id="editDocTypes">
                     <option v-for="t in uniqueDocumentTypes" :key="t" :value="t"></option>
@@ -500,6 +498,10 @@
                 <h3 class="text-2xl font-bold mb-6 dark:text-white">Edit Driver</h3>
                 <input v-model="editDriverData.name" placeholder="Full Name" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
                 <input type="tel" v-model="editDriverData.phone" placeholder="Phone Number" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                
+                <!-- NEW EMAIL FIELD -->
+                <input type="email" v-model="editDriverData.email" placeholder="Email Address (Optional)" class="w-full p-4 mb-3 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
+                
                 <label class="block text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-widest mb-1.5 ml-1">License Expiry</label>
                 <input type="date" v-model="editDriverData.expiry" class="w-full p-4 mb-6 bg-stone-50 dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-700 outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white" />
                 <button @click="updateDriver" class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold hover:bg-indigo-600 transition">Update Driver</button>
@@ -509,9 +511,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // UPDATE YOUR EMAIL HERE
-        // ==========================================
        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';
 
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
@@ -522,7 +521,6 @@
         
         createApp({
             setup() {
-                // Auth States
                 const isLoggedIn = ref(false);
                 const isLoginMode = ref(true);
                 const isLoading = ref(false);
@@ -533,26 +531,20 @@
                 const showPassword = ref(false);
                 const isDarkMode = ref(false);
                 
-                // Email vs Phone Auth Toggle
                 const usePhoneAuth = ref(false);
                 const authEmail = ref('');
                 const selectedCountryCode = ref('+234');
                 const localPhoneNumber = ref('');
                 
-                // Search State
                 const searchQuery = ref('');
-
-                // Navigation
                 const activeTab = ref('fleet'); 
                 const contactHelpEmail = ref(CONTACT_HELP_EMAIL);
                 
-                // Data
                 const currentUser = ref({});
                 const cars = ref([]);
                 const documents = ref([]);
                 const drivers = ref([]);
                 
-                // Modals
                 const showProfileModal = ref(false);
                 const showCarModal = ref(false);
                 const showDocModal = ref(false);
@@ -561,27 +553,23 @@
                 const showEditDocModal = ref(false);
                 const showEditDriverModal = ref(false);
                 
-                // Forms
                 const profileName = ref('');
                 const profileEmail = ref('');
                 const profilePhone = ref('');
                 
                 const newCar = ref({ name: '', plate: '', driver_id: '' });
                 const newDoc = ref({ carId: '', type: '', expiry: '' });
-                const newDriver = ref({ name: '', phone: '', expiry: '' });
+                // ADDED EMAIL TO STATE
+                const newDriver = ref({ name: '', phone: '', email: '', expiry: '' });
                 const editCarData = ref({ id: '', name: '', plate: '', driver_id: '' });
                 const editDocData = ref({ id: '', type: '', expiry: '', image_url: '' });
-                const editDriverData = ref({ id: '', name: '', phone: '', expiry: '' });
+                // ADDED EMAIL TO STATE
+                const editDriverData = ref({ id: '', name: '', phone: '', email: '', expiry: '' });
                 
                 const isLoadingData = ref(false);
-                
-                // Image Upload State
                 const selectedFile = ref(null);
                 const isUploadingDoc = ref(false);
 
-                // ==========================================
-                // ON MOUNT (THEME & SESSION RESTORE)
-                // ==========================================
                 onMounted(() => {
                     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         isDarkMode.value = true;
@@ -610,9 +598,6 @@
                     }
                 };
 
-                // ==========================================
-                // HELPER & COMPUTED FUNCTIONS
-                // ==========================================
                 const isExpiringSoon = (expiryDateStr) => {
                     if (!expiryDateStr) return false;
                     const today = new Date();
@@ -626,7 +611,6 @@
                 const getDriver = (driverId) => drivers.value.find(d => d.id === driverId);
                 const getCarsByDriver = (driverId) => cars.value.filter(c => c.driver_id === driverId);
 
-                // Computes all unique document types from the database for the dropdown
                 const uniqueDocumentTypes = computed(() => {
                     const types = documents.value.map(doc => doc.type);
                     return [...new Set(types)].filter(Boolean); 
@@ -654,9 +638,6 @@
                     return docsExpiring + licensesExpiring;
                 });
 
-                // ==========================================
-                // CUSTOM DATABASE AUTHENTICATION LOGIC
-                // ==========================================
                 const toggleAuthMode = () => { 
                     isLoginMode.value = !isLoginMode.value; 
                     authError.value = ''; 
@@ -759,17 +740,14 @@
 
                 const deleteAccount = async () => {
                     if (!confirm("Are you ABSOLUTELY sure? This deletes everything permanently.")) return;
-                    
                     try {
                         if (cars.value.length > 0) {
                             await supabaseClient.from('documents').delete().in('car_id', cars.value.map(c => c.id));
                         }
                         await supabaseClient.from('cars').delete().eq('owner_id', currentUser.value.id);
                         await supabaseClient.from('drivers').delete().eq('owner_id', currentUser.value.id);
-                        
                         const { error } = await supabaseClient.from('users').delete().eq('id', currentUser.value.id);
                         if (error) throw error;
-
                         alert("Your account and all associated data have been deleted.");
                         logout();
                         showProfileModal.value = false;
@@ -778,9 +756,6 @@
                     }
                 };
 
-                // ==========================================
-                // DATABASE CRUD
-                // ==========================================
                 const fetchFleet = async () => {
                     if (!currentUser.value.id) return;
                     isLoadingData.value = true;
@@ -864,10 +839,11 @@
                         owner_id: currentUser.value.id, 
                         name: newDriver.value.name, 
                         phone: newDriver.value.phone,
+                        email: newDriver.value.email || null, // INJECTS EMAIL
                         license_expiry: newDriver.value.expiry
                     }]);
                     if (error) { alert("Failed to add driver: " + error.message); return; }
-                    newDriver.value = { name: '', phone: '', expiry: '' };
+                    newDriver.value = { name: '', phone: '', email: '', expiry: '' };
                     showDriverModal.value = false;
                     activeTab.value = 'drivers';
                     fetchFleet();
@@ -885,7 +861,8 @@
                 };
 
                 const openEditDriver = (driver) => {
-                    editDriverData.value = { id: driver.id, name: driver.name, phone: driver.phone, expiry: driver.license_expiry };
+                    // PULLS EMAIL FOR EDITING
+                    editDriverData.value = { id: driver.id, name: driver.name, phone: driver.phone, email: driver.email || '', expiry: driver.license_expiry };
                     showEditDriverModal.value = true;
                 };
 
@@ -933,6 +910,7 @@
                     await supabaseClient.from('drivers').update({ 
                         name: editDriverData.value.name, 
                         phone: editDriverData.value.phone,
+                        email: editDriverData.value.email || null, // SAVES EDITED EMAIL
                         license_expiry: editDriverData.value.expiry 
                     }).eq('id', editDriverData.value.id);
                     showEditDriverModal.value = false;

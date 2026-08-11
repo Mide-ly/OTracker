@@ -8,20 +8,12 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Initialize Supabase Client
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Keep-Awake / Health Check Route
-app.get('/', (req, res) => {
-    res.send("OTracker Email Notification Server is Running!");
-});
+app.get('/', (req, res) => res.send("OTracker Email Notification Server is Running!"));
 
-// THE TRIGGER ENDPOINT (Pinged by cron-job.org)
 app.get('/api/run-reminders', async (req, res) => {
-    console.log('Cron triggered: Checking for document expiry reminders...');
+    console.log('Cron triggered: Checking for document & license expiry reminders...');
     let emailsSent = 0;
 
     try {
@@ -34,87 +26,100 @@ app.get('/api/run-reminders', async (req, res) => {
 
         const todayStr = addDays(0);
         const maxDateStr = addDays(30);
+        const todayObj = new Date(todayStr);
 
-        // 1. Fetch ALL documents expiring in 30 days OR LESS (this includes all past expired documents)
-        const { data: documents, error } = await supabase
+        // ==========================================
+        // 1. CHECK VEHICLE DOCUMENTS
+        // ==========================================
+        const { data: documents, error: docError } = await supabase
             .from('documents')
             .select('*')
             .lte('expiry_date', maxDateStr);
 
-        if (error) throw error;
+        if (docError) throw docError;
 
         if (documents && documents.length > 0) {
             for (const doc of documents) {
-                
                 const expiryObj = new Date(doc.expiry_date);
-                const todayObj = new Date(todayStr);
-                
-                // Calculates exact days remaining (Negative numbers = days already expired)
                 const diffDays = Math.round((expiryObj - todayObj) / (1000 * 60 * 60 * 24));
-
-                // 2. THE MAGIC FILTER: Only alert if it is exactly a multiple of 5 days
-                // This cleanly catches 30, 25, 20... 0... -5, -10, -15... forever!
+                
                 if (diffDays % 5 !== 0) continue;
 
-                // Get Car details
-                const { data: car } = await supabase
-                    .from('cars')
-                    .select('*')
-                    .eq('id', doc.car_id)
-                    .single();
+                const { data: car } = await supabase.from('cars').select('*').eq('id', doc.car_id).single();
                 if (!car) continue;
 
-                // Get Owner details
-                const { data: owner } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', car.owner_id)
-                    .single();
+                const { data: owner } = await supabase.from('users').select('*').eq('id', car.owner_id).single();
                 if (!owner) continue;
 
                 const userEmail = owner.email;
-                const userName = owner.username || owner.name || owner.first_name || 'Valued User';
-                const vehicleName = `${car.name} (${car.plate_number})`;
+                if (!userEmail || userEmail.trim() === '') continue;
 
-                // 3. Dynamic formatting for past vs future alerts
-                let statusText = "";
-                if (diffDays > 0) {
-                    statusText = `Expires in ${diffDays} days`;
-                } else if (diffDays === 0) {
-                    statusText = "EXPIRES TODAY";
-                } else {
-                    statusText = `EXPIRED ${Math.abs(diffDays)} days ago!`;
-                }
+                let statusText = diffDays > 0 ? `Expires in ${diffDays} days` : (diffDays === 0 ? "EXPIRES TODAY" : `EXPIRED ${Math.abs(diffDays)} days ago!`);
 
-                if (userEmail && userEmail.trim() !== '') {
-                    
-                    const templateParams = {
-                        user_name: userName,
+                await emailjs.send(
+                    process.env.EMAILJS_SERVICE_ID,
+                    process.env.EMAILJS_TEMPLATE_ID,
+                    {
+                        user_name: owner.username || owner.name || owner.first_name || 'Valued User',
                         user_email: userEmail,
-                        vehicle_name: vehicleName,
+                        driver_email: "", // Leave blank for standard vehicle docs
+                        vehicle_name: `${car.name} (${car.plate_number})`,
                         doc_type: doc.type,
                         expiry_date: doc.expiry_date,
                         days_remaining: statusText 
-                    };
+                    },
+                    { publicKey: process.env.EMAILJS_PUBLIC_KEY, privateKey: process.env.EMAILJS_PRIVATE_KEY }
+                );
+                emailsSent++;
+            }
+        }
 
-                    await emailjs.send(
-                        process.env.EMAILJS_SERVICE_ID,
-                        process.env.EMAILJS_TEMPLATE_ID,
-                        templateParams,
-                        {
-                            publicKey: process.env.EMAILJS_PUBLIC_KEY,
-                            privateKey: process.env.EMAILJS_PRIVATE_KEY 
-                        }
-                    );
-                    emailsSent++;
-                }
+        // ==========================================
+        // 2. CHECK DRIVER LICENSES
+        // ==========================================
+        const { data: drivers, error: driverError } = await supabase
+            .from('drivers')
+            .select('*')
+            .lte('license_expiry', maxDateStr);
+
+        if (driverError) throw driverError;
+
+        if (drivers && drivers.length > 0) {
+            for (const driver of drivers) {
+                const expiryObj = new Date(driver.license_expiry);
+                const diffDays = Math.round((expiryObj - todayObj) / (1000 * 60 * 60 * 24));
+                
+                if (diffDays % 5 !== 0) continue;
+
+                const { data: owner } = await supabase.from('users').select('*').eq('id', driver.owner_id).single();
+                if (!owner) continue;
+
+                const userEmail = owner.email;
+                if (!userEmail || userEmail.trim() === '') continue;
+
+                let statusText = diffDays > 0 ? `Expires in ${diffDays} days` : (diffDays === 0 ? "EXPIRES TODAY" : `EXPIRED ${Math.abs(diffDays)} days ago!`);
+
+                await emailjs.send(
+                    process.env.EMAILJS_SERVICE_ID,
+                    process.env.EMAILJS_TEMPLATE_ID,
+                    {
+                        user_name: owner.username || owner.name || owner.first_name || 'Valued User',
+                        user_email: userEmail,
+                        driver_email: driver.email || "", // THIS CC'S THE DRIVER!
+                        vehicle_name: `Driver Roster: ${driver.name}`,
+                        doc_type: "Driver's License",
+                        expiry_date: driver.license_expiry,
+                        days_remaining: statusText 
+                    },
+                    { publicKey: process.env.EMAILJS_PUBLIC_KEY, privateKey: process.env.EMAILJS_PRIVATE_KEY }
+                );
+                emailsSent++;
             }
         }
         
-        console.log(`Job complete. Sent ${emailsSent} email alerts.`);
+        console.log(`Job complete. Sent ${emailsSent} total email alerts.`);
         res.status(200).send(`OK. ${emailsSent} email alerts sent.`);
     } catch (err) {
-        // EXPOSING THE HIDDEN EMAILJS ERROR
         const errorDetails = err.text || err.message || JSON.stringify(err);
         console.error("Error during reminder execution:", errorDetails);
         res.status(500).send(`Server Error: ${errorDetails}`);
