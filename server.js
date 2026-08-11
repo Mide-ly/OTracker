@@ -32,14 +32,17 @@ app.get('/api/run-reminders', async (req, res) => {
             return d.toISOString().split('T')[0];
         };
 
-        // Check for documents expiring today or exactly in 30 days
         const todayStr = addDays(0);
-        const nextMonthStr = addDays(30);
 
+        // 1. Generate target dates for 30, 25, 20, 15, 10, 5, and 0 days out
+        const intervalDays = [0, 5, 10, 15, 20, 25, 30];
+        const targetDates = intervalDays.map((days) => addDays(days));
+
+        // 2. Query documents matching any of these exact 5-day interval dates
         const { data: documents, error } = await supabase
             .from('documents')
             .select('*')
-            .or(`expiry_date.eq.${todayStr},expiry_date.eq.${nextMonthStr}`);
+            .in('expiry_date', targetDates);
 
         if (error) throw error;
 
@@ -64,17 +67,23 @@ app.get('/api/run-reminders', async (req, res) => {
                 const userEmail = owner.email;
                 const vehicleName = `${car.name} (${car.plate_number})`;
 
+                // Calculate exact days remaining for the email template
+                const expiryObj = new Date(doc.expiry_date);
+                const todayObj = new Date(todayStr);
+                const daysRemaining = Math.round((expiryObj - todayObj) / (1000 * 60 * 60 * 24));
+
                 if (userEmail && userEmail.trim() !== '') {
                     
-                    // 1. Define the parameters matching your EmailJS dashboard template
+                    // Parameters matching your EmailJS template
                     const templateParams = {
                         user_email: userEmail,
                         vehicle_name: vehicleName,
                         doc_type: doc.type,
-                        expiry_date: doc.expiry_date
+                        expiry_date: doc.expiry_date,
+                        days_remaining: daysRemaining === 0 ? "TODAY" : `${daysRemaining} days`
                     };
 
-                    // 2. Fire the email via EmailJS
+                    // Send email via EmailJS
                     await emailjs.send(
                         process.env.EMAILJS_SERVICE_ID,
                         process.env.EMAILJS_TEMPLATE_ID,
