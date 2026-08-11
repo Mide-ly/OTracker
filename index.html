@@ -2,16 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTracker | Fleet Management</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OTracker | Free Fleet Reminders</title>
     
-    <!-- Real Favicon Treatment (Matches new Logo) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ea580c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><path d='M12 12l4 -4'></path><path d='M8 12h.01'></path><path d='M16 12h.01'></path><path d='M12 8h.01'></path></svg>">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Professional Font Pairing: Sora (Headings) + Inter (Body) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -27,12 +25,7 @@
                         display: ['Sora', 'sans-serif'],
                     },
                     colors: {
-                        // Deep automotive tone + warm orange accent
-                        accent: {
-                            500: '#f97316',
-                            600: '#ea580c',
-                            700: '#c2410c',
-                        }
+                        accent: { 500: '#f97316', 600: '#ea580c', 700: '#c2410c' }
                     }
                 }
             }
@@ -41,69 +34,89 @@
 
     <style>
         .bg-pattern { background-color: #f8fafc; background-image: radial-gradient(#e2e8f0 1px, transparent 1px); background-size: 24px 24px; }
-        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
         .dark .bg-pattern { background-color: #0f172a; background-image: radial-gradient(#1e293b 1px, transparent 1px); }
-        .dark .glass { background: rgba(15, 23, 42, 0.85); border-color: rgba(51, 65, 85, 0.5); }
+        .dark .glass { background: rgba(15, 23, 42, 0.95); border-color: rgba(51, 65, 85, 0.8); }
         [v-cloak] { display: none; }
         
         input[type="file"]::file-selector-button {
             border: none;
             background: #e2e8f0;
             padding: 8px 16px;
-            border-radius: 8px; /* 8px rule */
+            border-radius: 8px;
             color: #0f172a;
             font-family: 'Sora', sans-serif;
             font-weight: 600;
             cursor: pointer;
-            margin-right: 16px; /* 16px rule */
+            margin-right: 16px;
             transition: all 0.2s;
         }
         .dark input[type="file"]::file-selector-button { background: #334155; color: #f8fafc; }
         input[type="file"]::file-selector-button:hover { background: #cbd5e1; }
         .dark input[type="file"]::file-selector-button:hover { background: #475569; }
+        
+        /* Smooth subtle transitions */
+        .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        
+        /* Custom Scrollbar for dropdowns */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
 <body class="bg-pattern text-slate-900 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-300">
 
-    <div id="app" v-cloak class="w-full min-h-screen flex flex-col">
+    <div id="app" v-cloak class="w-full min-h-screen flex flex-col relative">
+        
+        <!-- GLOBAL TOAST NOTIFICATION -->
+        <transition enter-active-class="transition duration-300 ease-out" enter-from-class="transform translate-y-2 opacity-0" enter-to-class="transform translate-y-0 opacity-100" leave-active-class="transition duration-200 ease-in" leave-from-class="transform translate-y-0 opacity-100" leave-to-class="transform translate-y-2 opacity-0">
+            <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-2xl font-display font-semibold text-sm flex items-center gap-3 w-max max-w-[90vw]" :class="toast.type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'">
+                <svg v-if="toast.type === 'success'" class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <svg v-if="toast.type === 'error'" class="w-5 h-5 text-rose-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                {{ toast.message }}
+            </div>
+        </transition>
+
+        <!-- FULL PAGE LOADING STATE (COLD START) -->
+        <div v-if="isInitialLoading" class="fixed inset-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+            <svg class="animate-spin w-10 h-10 text-accent-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="font-display font-bold text-slate-600 dark:text-slate-300">Waking up secure vault...</p>
+        </div>
         
         <!-- AUTHENTICATION SCREEN -->
-        <div v-if="!isLoggedIn" class="flex-1 flex items-center justify-center p-4 sm:p-8">
-            <div class="glass w-full max-w-md p-8 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 relative">
+        <div v-if="!isLoggedIn && !isInitialLoading" class="flex-1 flex items-center justify-center p-4 sm:p-8">
+            <div class="glass w-full max-w-md p-8 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 relative">
                 
-                <div class="flex flex-col items-center justify-center mb-8">
-                    <!-- Distinctive Speedometer Logo Mark -->
-                    <svg class="w-12 h-12 text-accent-600 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 12l4 -4"></path>
-                        <path d="M8 12h.01"></path>
-                        <path d="M16 12h.01"></path>
-                        <path d="M12 8h.01"></path>
-                    </svg>
-                    <h1 class="text-3xl font-display font-bold tracking-tight text-slate-900 dark:text-white mb-2">OTracker</h1>
-                    <p class="text-slate-500 dark:text-slate-400 font-medium text-center">{{ isLoginMode ? 'Login to your fleet vault.' : 'Create your secure OTracker account.' }}</p>
+                <div class="flex flex-col items-center justify-center mb-6">
+                    <svg class="w-12 h-12 text-accent-600 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 12l4 -4"></path><path d="M8 12h.01"></path><path d="M16 12h.01"></path><path d="M12 8h.01"></path></svg>
+                    <h1 class="text-3xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">OTracker</h1>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium text-center text-sm leading-relaxed px-4">
+                        Never miss a vehicle renewal again.<br>Track roadworthiness, hackney permits, and licenses with <strong class="text-slate-900 dark:text-white">free email reminders.</strong>
+                    </p>
                 </div>
                 
                 <div class="space-y-4">
                     <div v-if="!isLoginMode">
                         <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Full Name</label>
-                        <input type="text" v-model="authName" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-accent-500 outline-none transition dark:text-white" placeholder="John Doe" />
+                        <input type="text" v-model="authName" class="w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-accent-500 outline-none transition dark:text-white" placeholder="John Doe" />
                     </div>
 
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest">{{ usePhoneAuth ? 'Phone Number' : 'Email Address' }}</label>
-                            <button type="button" @click="usePhoneAuth = !usePhoneAuth" class="text-xs font-display font-semibold text-accent-600 hover:text-accent-700 transition">
+                            <button type="button" @click="usePhoneAuth = !usePhoneAuth; authError = ''" class="text-xs font-display font-semibold text-accent-600 hover:text-accent-700 transition">
                                 {{ usePhoneAuth ? 'Use Email instead' : 'Use Phone Number instead' }}
                             </button>
                         </div>
 
                         <div v-if="!usePhoneAuth">
-                            <input type="email" v-model="authEmail" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-accent-500 outline-none transition dark:text-white" placeholder="you@example.com" />
+                            <input type="email" v-model="authEmail" class="w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-accent-500 outline-none transition dark:text-white" placeholder="you@example.com" />
                         </div>
                         
                         <div v-else class="flex gap-2">
-                            <select v-model="selectedCountryCode" class="w-24 px-2 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm outline-none text-sm font-medium dark:text-white transition">
+                            <select v-model="selectedCountryCode" class="w-24 px-2 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm outline-none text-sm font-medium dark:text-white transition">
                                 <option value="+234">+234</option>
                                 <option value="+233">+233</option>
                                 <option value="+27">+27</option>
@@ -111,14 +124,14 @@
                                 <option value="+44">+44</option>
                                 <option value="+1">+1</option>
                             </select>
-                            <input type="tel" v-model="localPhoneNumber" class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-accent-500 outline-none transition dark:text-white" placeholder="801 234 5678" />
+                            <input type="tel" v-model="localPhoneNumber" class="flex-1 px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-accent-500 outline-none transition dark:text-white" placeholder="0803 123 4567" />
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Password</label>
                         <div class="relative">
-                            <input :type="showPassword ? 'text' : 'password'" v-model="authPassword" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm focus:ring-2 focus:ring-accent-500 outline-none pr-12 transition dark:text-white" />
+                            <input :type="showPassword ? 'text' : 'password'" v-model="authPassword" class="w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm focus:ring-2 focus:ring-accent-500 outline-none pr-12 transition dark:text-white" />
                             <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition">
                                 <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                 <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
@@ -127,10 +140,11 @@
                     </div>
                 </div>
 
-                <div v-if="authError" :class="isSuccessMsg ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'" class="mt-4 p-4 text-sm rounded-lg text-center font-medium">{{ authError }}</div>
+                <div v-if="authError" class="mt-4 p-3 text-sm rounded-xl text-center font-medium bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-800">{{ authError }}</div>
                 
-                <button @click="handleAuth" :disabled="isLoading" class="w-full mt-8 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 py-3 rounded-lg font-display font-semibold transition shadow-sm">
-                    {{ isLoading ? 'Processing...' : (isLoginMode ? 'Access Vault' : 'Create Account') }}
+                <button @click="handleAuth" :disabled="isLoading" class="w-full mt-8 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 py-3 rounded-xl font-display font-semibold transition flex justify-center items-center gap-2 shadow-md">
+                    <svg v-if="isLoading" class="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isLoading ? 'Authenticating...' : (isLoginMode ? 'Access Vault' : 'Create Account') }}
                 </button>
                 
                 <button @click="toggleAuthMode" class="w-full mt-4 text-slate-500 hover:text-slate-900 dark:hover:text-white text-sm font-medium transition">
@@ -140,72 +154,67 @@
         </div>
 
         <!-- MAIN DASHBOARD -->
-        <div v-else class="flex-1 flex flex-col w-full h-full p-4 sm:p-8 max-w-7xl mx-auto">
-            <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-8">
+        <div v-else-if="!isInitialLoading" class="flex-1 flex flex-col w-full h-full p-4 sm:p-8 max-w-7xl mx-auto">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 pt-2">
                 <div class="flex items-center gap-4">
-                    <svg class="w-10 h-10 text-accent-600 hidden sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 12l4 -4"></path>
-                        <path d="M8 12h.01"></path>
-                        <path d="M16 12h.01"></path>
-                        <path d="M12 8h.01"></path>
-                    </svg>
+                    <svg class="w-12 h-12 text-accent-600 hidden sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 12l4 -4"></path><path d="M8 12h.01"></path><path d="M16 12h.01"></path><path d="M12 8h.01"></path></svg>
                     <div>
-                        <h1 class="text-2xl font-display font-bold tracking-tight text-slate-900 dark:text-white">OTracker</h1>
+                        <h1 class="text-2xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">OTracker</h1>
                         <p class="text-slate-500 dark:text-slate-400 font-medium text-sm">Welcome back, {{ currentUser?.name || currentUser?.email || currentUser?.phone_number }}.</p>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-4">
-                    <button @click="showCarModal = true" class="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-4 py-2 rounded-lg font-display font-semibold transition shadow-sm text-sm">+ Add Vehicle</button>
-                    <button @click="showDriverModal = true" class="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-4 py-2 rounded-lg font-display font-semibold transition shadow-sm text-sm">+ Add Driver</button>
-                    <button v-if="cars.length > 0" @click="openAddDocForCar('')" class="bg-accent-600 hover:bg-accent-700 text-white px-4 py-2 rounded-lg font-display font-semibold transition shadow-sm text-sm">+ Add Document</button>
+                <div class="flex flex-wrap gap-3 w-full md:w-auto">
+                    <button @click="showCarModal = true" class="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white px-4 py-2.5 rounded-xl font-display font-semibold transition shadow-sm text-sm whitespace-nowrap border border-slate-200 dark:border-slate-700">Add Vehicle</button>
+                    <button @click="showDriverModal = true" class="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white px-4 py-2.5 rounded-xl font-display font-semibold transition shadow-sm text-sm whitespace-nowrap border border-slate-200 dark:border-slate-700">Add Driver</button>
                     
-                    <div class="w-px h-8 bg-slate-300 dark:bg-slate-700 hidden sm:block mx-2 self-center"></div>
-                    
-                    <button @click="openProfileModal" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg font-display font-semibold transition shadow-sm text-sm">Settings</button>
-                    <button @click="logout" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg font-display font-semibold transition shadow-sm text-sm">Logout</button>
+                    <button @click="openProfileModal" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 p-2.5 rounded-xl transition shadow-sm" title="Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </button>
+                    <button @click="logout" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 p-2.5 rounded-xl transition shadow-sm" title="Logout">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+                    </button>
                 </div>
             </header>
 
             <div class="flex-1">
                 <!-- METRICS SECTION -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white dark:bg-slate-800/80 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-between">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+                    <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                         <div>
-                            <p class="text-slate-500 dark:text-slate-400 text-xs font-display font-semibold uppercase tracking-widest mb-2">Total Vehicles</p>
-                            <h3 class="text-3xl font-display font-bold text-slate-900 dark:text-white">{{ totalVehicles }}</h3>
+                            <p class="text-slate-500 dark:text-slate-400 text-xs font-display font-bold uppercase tracking-widest mb-2">Total Vehicles</p>
+                            <h3 class="text-3xl font-display font-extrabold text-slate-900 dark:text-white">{{ totalVehicles }}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                        <div class="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 flex items-center justify-center text-slate-400 dark:text-slate-300">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-slate-800/80 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-between">
+                    <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                         <div>
-                            <p class="text-slate-500 dark:text-slate-400 text-xs font-display font-semibold uppercase tracking-widest mb-2">Active Credentials</p>
-                            <h3 class="text-3xl font-display font-bold text-slate-900 dark:text-white">{{ activeCredentials }}</h3>
+                            <p class="text-emerald-600 dark:text-emerald-400 text-xs font-display font-bold uppercase tracking-widest mb-2">Safe Documents</p>
+                            <h3 class="text-3xl font-display font-extrabold text-slate-900 dark:text-white">{{ activeCredentials }}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center text-emerald-500">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-slate-800/80 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-between">
+                    <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                         <div>
-                            <p class="text-slate-500 dark:text-slate-400 text-xs font-display font-semibold uppercase tracking-widest mb-2">Action Needed</p>
-                            <h3 class="text-3xl font-display font-bold text-accent-600">{{ actionNeeded }}</h3>
+                            <p class="text-rose-600 dark:text-rose-400 text-xs font-display font-bold uppercase tracking-widest mb-2">Action Needed</p>
+                            <h3 class="text-3xl font-display font-extrabold" :class="actionNeeded > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'">{{ actionNeeded }}</h3>
                         </div>
-                        <div class="w-12 h-12 rounded-lg bg-accent-50 dark:bg-accent-900/30 flex items-center justify-center text-accent-600">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center border" :class="actionNeeded > 0 ? 'bg-rose-50 dark:bg-rose-900/30 border-rose-100 dark:border-rose-800/50 text-rose-500' : 'bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 text-slate-400'">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         </div>
                     </div>
                 </div>
 
                 <!-- TABS NAVIGATION -->
-                <div class="flex space-x-8 border-b border-slate-200 dark:border-slate-700 mb-8">
-                    <button @click="activeTab = 'fleet'" :class="{'border-slate-900 dark:border-white text-slate-900 dark:text-white': activeTab === 'fleet', 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300': activeTab !== 'fleet'}" class="pb-4 font-display font-semibold border-b-2 transition duration-200">
-                        Fleet Registry
+                <div class="flex space-x-8 border-b border-slate-200 dark:border-slate-700 mb-8 overflow-x-auto">
+                    <button @click="activeTab = 'fleet'" :class="{'border-slate-900 dark:border-white text-slate-900 dark:text-white': activeTab === 'fleet', 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300': activeTab !== 'fleet'}" class="pb-4 font-display font-bold border-b-2 transition duration-200 whitespace-nowrap">
+                        Fleet Dashboard
                     </button>
-                    <button @click="activeTab = 'drivers'" :class="{'border-slate-900 dark:border-white text-slate-900 dark:text-white': activeTab === 'drivers', 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300': activeTab !== 'drivers'}" class="pb-4 font-display font-semibold border-b-2 transition duration-200 flex items-center gap-2">
-                        Driver Management
+                    <button @click="activeTab = 'drivers'" :class="{'border-slate-900 dark:border-white text-slate-900 dark:text-white': activeTab === 'drivers', 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300': activeTab !== 'drivers'}" class="pb-4 font-display font-bold border-b-2 transition duration-200 flex items-center gap-2 whitespace-nowrap">
+                        Driver Roster
                         <span v-if="drivers.length > 0" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs py-0.5 px-2 rounded-lg border border-slate-200 dark:border-slate-700">{{ drivers.length }}</span>
                     </button>
                 </div>
@@ -213,40 +222,47 @@
                 <!-- TAB CONTENT: FLEET REGISTRY -->
                 <div v-if="activeTab === 'fleet'">
                     
-                    <div v-if="cars.length > 0" class="mb-8 relative">
-                        <input type="text" v-model="searchQuery" placeholder="Search by vehicle name or plate number..." class="w-full px-4 py-3 pl-12 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm" />
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div v-if="cars.length > 0" class="mb-8 relative max-w-md">
+                        <input type="text" v-model="searchQuery" placeholder="Search by vehicle name or plate..." class="w-full px-4 py-3 pl-11 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm text-sm" />
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                         </svg>
                         <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg font-bold transition">&times;</button>
                     </div>
 
-                    <div v-if="cars.length === 0" class="flex items-center justify-center p-8 glass rounded-xl border border-slate-200 dark:border-slate-800 mb-8 shadow-sm">
-                        <div class="text-center">
-                            <h2 class="text-xl font-display font-bold text-slate-900 dark:text-white mb-2">No Vehicles Yet</h2>
-                            <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">Your fleet registry is empty. Let's get started!</p>
-                            <button @click="showCarModal = true" class="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold shadow-sm transition">+ Add Your First Vehicle</button>
+                    <!-- EMPTY STATE: NO CARS -->
+                    <div v-if="cars.length === 0" class="flex flex-col items-center justify-center p-12 glass rounded-2xl border border-slate-200 dark:border-slate-800 mb-8 shadow-sm">
+                        <div class="w-24 h-24 mb-6 text-slate-300 dark:text-slate-600 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-full h-full"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
                         </div>
+                        <h2 class="text-2xl font-display font-extrabold text-slate-900 dark:text-white mb-2">No Vehicles Yet</h2>
+                        <p class="text-slate-500 dark:text-slate-400 mb-8 text-sm max-w-md text-center">Your vault is completely empty. Add your first vehicle to start tracking insurance, hackney permits, and roadworthiness.</p>
+                        <button @click="showCarModal = true" class="bg-accent-600 hover:bg-accent-700 text-white px-8 py-3 rounded-xl font-display font-semibold shadow-md transition transform active:scale-95 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Add Your First Vehicle
+                        </button>
                     </div>
 
-                    <div v-else-if="filteredCars.length === 0" class="flex items-center justify-center p-8 glass rounded-xl border border-slate-200 dark:border-slate-800 mb-8 shadow-sm">
-                        <div class="text-center">
-                            <h2 class="text-lg font-display font-bold text-slate-900 dark:text-white mb-2">No Matching Vehicles</h2>
-                            <p class="text-slate-500 dark:text-slate-400 text-sm">No vehicles found matching "{{ searchQuery }}".</p>
-                        </div>
+                    <div v-else-if="filteredCars.length === 0" class="flex flex-col items-center justify-center p-12 glass rounded-2xl border border-slate-200 dark:border-slate-800 mb-8 shadow-sm">
+                        <h2 class="text-lg font-display font-bold text-slate-900 dark:text-white mb-2">No Matching Vehicles</h2>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm">No vehicles found matching "{{ searchQuery }}".</p>
                     </div>
 
                     <!-- CARS GRID -->
-                    <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        <div v-for="car in filteredCars" :key="car.id" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden flex flex-col transition-colors">
-                            <div class="bg-slate-900 p-6 text-white flex flex-col rounded-t-xl">
-                                <div class="flex justify-between items-start mb-4">
+                    <div v-else class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
+                        <div v-for="car in filteredCars" :key="car.id" class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col card-hover">
+                            <!-- CAR HEADER -->
+                            <div class="bg-slate-900 p-6 text-white flex flex-col relative overflow-hidden">
+                                <!-- Subtle accent line at top -->
+                                <div class="absolute top-0 left-0 right-0 h-1 bg-accent-600"></div>
+                                
+                                <div class="flex justify-between items-start mb-6">
                                     <div>
                                         <h2 class="text-xl font-display font-bold mb-2">{{ car.name }}</h2>
-                                        <span class="inline-block px-2 py-1 bg-white/10 rounded-lg text-xs font-mono font-semibold tracking-widest uppercase border border-white/10">{{ car.plate_number }}</span>
+                                        <span class="inline-block px-2.5 py-1 bg-white/10 rounded-md text-xs font-mono font-semibold tracking-widest uppercase border border-white/10">{{ car.plate_number }}</span>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button @click="openEditCar(car)" class="text-slate-400 hover:text-white p-1 rounded transition duration-200" title="Edit Vehicle (Assign Driver)">
+                                        <button @click="openEditCar(car)" class="text-slate-400 hover:text-white p-1 rounded transition duration-200" title="Edit Vehicle">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                         </button>
                                         <button @click="deleteCar(car.id)" class="text-slate-400 hover:text-rose-400 p-1 rounded transition duration-200" title="Delete Vehicle">
@@ -254,30 +270,31 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="pt-4 border-t border-white/10 flex justify-between items-center bg-white/5 rounded-lg p-3">
+                                <div class="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center">
                                     <div v-if="car.driver_id && getDriver(car.driver_id)" class="w-full flex justify-between items-center">
                                         <div class="flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-slate-400"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
                                             <span class="text-sm font-semibold">{{ getDriver(car.driver_id).name }}</span>
                                         </div>
-                                        <span class="text-xs font-mono" :class="isExpiringSoon(getDriver(car.driver_id).license_expiry) ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-400'">
-                                            Lic: {{ getDriver(car.driver_id).license_expiry }}
-                                        </span>
+                                        <div class="px-2 py-1 rounded border text-xs font-mono font-bold" :class="getUrgency(getDriver(car.driver_id).license_expiry).bg + ' ' + getUrgency(getDriver(car.driver_id).license_expiry).color">
+                                            Lic: {{ getUrgency(getDriver(car.driver_id).license_expiry).level === 'safe' ? 'OK' : getUrgency(getDriver(car.driver_id).license_expiry).text }}
+                                        </div>
                                     </div>
-                                    <div v-else class="text-xs text-slate-400 italic w-full flex justify-between items-center">
+                                    <div v-else class="text-xs text-slate-400 italic w-full flex justify-between items-center px-1">
                                         <span>No driver assigned</span>
-                                        <button @click="openEditCar(car)" class="text-white/60 hover:text-white underline font-semibold transition">Assign</button>
+                                        <button @click="openEditCar(car)" class="text-white hover:text-accent-400 font-semibold transition">Assign</button>
                                     </div>
                                 </div>
                             </div>
                             
+                            <!-- DOCUMENTS LIST -->
                             <div class="p-6 flex-1 flex flex-col justify-between">
                                 <table class="w-full text-left mb-6">
-                                    <thead class="text-slate-500 dark:text-slate-400 text-xs font-display font-semibold uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50">
+                                    <thead class="text-slate-400 dark:text-slate-500 text-[10px] font-display font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50">
                                         <tr>
-                                            <th class="pb-2">Type</th>
-                                            <th class="pb-2 text-right">Expires</th>
-                                            <th class="pb-2 w-16"></th>
+                                            <th class="pb-3 font-semibold">Document</th>
+                                            <th class="pb-3 text-right font-semibold">Urgency</th>
+                                            <th class="pb-3 w-8"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -291,32 +308,40 @@
                                                     <div v-else class="w-10 h-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center text-slate-400 text-xs shadow-sm" title="No image uploaded">
                                                         📄
                                                     </div>
-                                                    <span class="text-sm">{{ doc.type }}</span>
+                                                    <span class="text-sm font-medium">{{ doc.type }}</span>
                                                 </div>
                                             </td>
 
-                                            <td class="py-4 text-right font-mono whitespace-nowrap text-sm transition-colors" :class="isExpiringSoon(doc.expiry_date) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-slate-500 dark:text-slate-400'">
-                                                {{ doc.expiry_date }}
+                                            <td class="py-4 text-right whitespace-nowrap">
+                                                <div class="flex flex-col items-end gap-1">
+                                                    <!-- URGENCY COUNTDOWN -->
+                                                    <span class="text-xs font-display font-bold px-2 py-0.5 rounded-md border" :class="getUrgency(doc.expiry_date).bg + ' ' + getUrgency(doc.expiry_date).color">
+                                                        {{ getUrgency(doc.expiry_date).text }}
+                                                    </span>
+                                                    <!-- ACTUAL DATE -->
+                                                    <span class="text-[10px] text-slate-400 font-mono font-medium">{{ formatDate(doc.expiry_date) }}</span>
+                                                </div>
                                             </td>
                                             <td class="py-4 text-right pl-2">
-                                                <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button @click="openEditDoc(doc)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition duration-150 p-1 rounded" title="Edit Document">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                                                <div class="flex flex-col justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button @click="openEditDoc(doc)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition duration-150" title="Edit Document">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                                     </button>
-                                                    <button @click="deleteDoc(doc.id)" class="text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition duration-150 p-1 rounded" title="Delete Document">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    <button @click="deleteDoc(doc.id)" class="text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition duration-150" title="Delete Document">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                         <tr v-if="getCarDocuments(car.id).length === 0">
-                                            <td colspan="3" class="py-8 text-center text-slate-400 dark:text-slate-500 text-sm">No documents attached.</td>
+                                            <td colspan="3" class="py-8 text-center text-slate-400 dark:text-slate-500 text-sm font-medium">No documents tracked yet.</td>
                                         </tr>
                                     </tbody>
                                 </table>
                                 
-                                <button @click="openAddDocForCar(car.id)" class="w-full mt-auto py-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-display font-semibold uppercase tracking-widest transition-colors duration-200">
-                                    + Add Document
+                                <button @click="openAddDocForCar(car.id)" class="w-full mt-auto py-3.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-display font-bold uppercase tracking-widest transition-colors duration-200 flex justify-center items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    Add Document
                                 </button>
                             </div>
                         </div>
@@ -325,43 +350,49 @@
 
                 <!-- TAB CONTENT: DRIVERS ROSTER -->
                 <div v-if="activeTab === 'drivers'">
-                    <div v-if="drivers.length === 0" class="flex items-center justify-center p-8 glass rounded-xl border border-slate-200 dark:border-slate-800 mb-8 shadow-sm">
-                        <div class="text-center">
-                            <h2 class="text-xl font-display font-bold text-slate-900 dark:text-white mb-2">No Drivers Yet</h2>
-                            <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">Your driver roster is currently empty.</p>
-                            <button @click="showDriverModal = true" class="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold shadow-sm transition">+ Add A Driver</button>
-                        </div>
+                    <div v-if="drivers.length === 0" class="flex flex-col items-center justify-center p-12 glass rounded-2xl border border-slate-200 dark:border-slate-800 mb-8 shadow-sm">
+                        <h2 class="text-2xl font-display font-extrabold text-slate-900 dark:text-white mb-2">No Drivers Yet</h2>
+                        <p class="text-slate-500 dark:text-slate-400 mb-6 text-sm">Your driver roster is currently empty.</p>
+                        <button @click="showDriverModal = true" class="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-8 py-3 rounded-xl font-display font-semibold shadow-md transition flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Add A Driver
+                        </button>
                     </div>
 
                     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <div v-for="driver in drivers" :key="driver.id" class="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 shadow-md relative group transition-colors">
+                        <div v-for="driver in drivers" :key="driver.id" class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm relative group card-hover">
                             <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 <button @click="openEditDriver(driver)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded transition" title="Edit Driver">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
                                 </button>
                                 <button @click="deleteDriver(driver.id)" class="text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 p-1 rounded transition" title="Delete Driver">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </div>
-                            <div class="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400 mb-4 border border-slate-200 dark:border-slate-600">
+                            
+                            <div class="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-5 border border-slate-200 dark:border-slate-600">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
                             </div>
-                            <h3 class="text-lg font-display font-bold text-slate-900 dark:text-white">{{ driver.name }}</h3>
-                            <p class="text-sm text-slate-500 dark:text-slate-400" :class="!driver.email ? 'mb-4' : 'mb-1'">{{ driver.phone }}</p>
-                            <p v-if="driver.email" class="text-xs text-slate-500 dark:text-slate-400 mb-4">{{ driver.email }}</p>
                             
-                            <div class="text-xs font-display font-semibold uppercase tracking-widest text-slate-500 mb-2">License Expiry</div>
-                            <div class="font-mono text-sm mb-4" :class="isExpiringSoon(driver.license_expiry) ? 'text-rose-600 dark:text-rose-400 font-bold animate-pulse' : 'text-slate-700 dark:text-slate-300'">
-                                {{ driver.license_expiry }}
+                            <h3 class="text-xl font-display font-bold text-slate-900 dark:text-white mb-1">{{ driver.name }}</h3>
+                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400" :class="!driver.email ? 'mb-5' : 'mb-1'">{{ driver.phone }}</p>
+                            <p v-if="driver.email" class="text-xs font-medium text-slate-400 dark:text-slate-500 mb-5">{{ driver.email }}</p>
+                            
+                            <div class="text-[10px] font-display font-bold uppercase tracking-widest text-slate-400 mb-2">License Expiry</div>
+                            <div class="flex items-center gap-3 mb-6">
+                                <span class="text-xs font-display font-bold px-2 py-0.5 rounded-md border" :class="getUrgency(driver.license_expiry).bg + ' ' + getUrgency(driver.license_expiry).color">
+                                    {{ getUrgency(driver.license_expiry).text }}
+                                </span>
+                                <span class="text-xs text-slate-400 font-mono font-medium">{{ formatDate(driver.license_expiry) }}</span>
                             </div>
 
-                            <div class="border-t border-slate-100 dark:border-slate-700 pt-4">
-                                <div class="text-xs font-display font-semibold uppercase tracking-widest text-slate-500 mb-2">Assigned Vehicles</div>
+                            <div class="border-t border-slate-100 dark:border-slate-700 pt-4 mt-auto">
+                                <div class="text-[10px] font-display font-bold uppercase tracking-widest text-slate-400 mb-3">Assigned Vehicles</div>
                                 <div class="flex flex-wrap gap-2">
-                                    <span v-for="car in getCarsByDriver(driver.id)" :key="car.id" class="inline-block px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-medium">
+                                    <span v-for="car in getCarsByDriver(driver.id)" :key="car.id" class="inline-flex px-2.5 py-1 bg-slate-50 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-md text-xs font-semibold">
                                         {{ car.name }}
                                     </span>
-                                    <span v-if="getCarsByDriver(driver.id).length === 0" class="text-xs text-slate-400 dark:text-slate-500">None assigned</span>
+                                    <span v-if="getCarsByDriver(driver.id).length === 0" class="text-xs text-slate-400 font-medium italic">None assigned</span>
                                 </div>
                             </div>
                         </div>
@@ -369,185 +400,206 @@
                 </div>
 
                 <!-- COMPANY FOOTER -->
-                <footer class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="text-slate-500 dark:text-slate-400 text-sm">
-                        &copy; {{ new Date().getFullYear() }} OTracker Fleet Management.
+                <footer class="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                        &copy; {{ new Date().getFullYear() }} OTracker. Free email reminders for your fleet.
                     </div>
                     <div class="flex items-center gap-4">
                         <a :href="'mailto:' + contactHelpEmail" class="text-slate-500 hover:text-slate-900 dark:hover:text-white text-sm font-semibold transition">Contact Support</a>
                         <span class="text-slate-300 dark:text-slate-700">|</span>
-                        <span class="text-slate-400 dark:text-slate-500 text-sm font-mono">v1.7.0</span>
+                        <span class="text-slate-400 dark:text-slate-500 text-sm font-mono font-medium">v1.8.0</span>
                     </div>
                 </footer>
             </div>
         </div>
 
         <!-- PROFILE MODAL -->
-        <div v-if="showProfileModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-md w-full relative max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700">
-                <button @click="showProfileModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white text-xl font-bold transition">&times;</button>
+        <div v-if="showProfileModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-md w-full relative max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700">
+                <button @click="showProfileModal = false" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 text-slate-900 dark:text-white">Profile Settings</h3>
                 
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div class="space-y-5">
+                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
                         <div>
-                            <p class="font-display font-semibold text-sm text-slate-900 dark:text-white">Dark Mode</p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Switch app appearance.</p>
+                            <p class="font-display font-bold text-sm text-slate-900 dark:text-white">Dark Mode</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Switch app appearance.</p>
                         </div>
-                        <button @click="toggleTheme" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none" :class="isDarkMode ? 'bg-slate-700' : 'bg-slate-300'">
+                        <button @click="toggleTheme" class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none" :class="isDarkMode ? 'bg-slate-600' : 'bg-slate-300'">
                             <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" :class="isDarkMode ? 'translate-x-6' : 'translate-x-1'"></span>
                         </button>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Account Name</label>
-                        <input type="text" v-model="profileName" placeholder="Your Name or Company" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm">
+                        <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2">Account Name</label>
+                        <input type="text" v-model="profileName" class="w-full px-4 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm">
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Email Address</label>
-                        <input type="email" v-model="profileEmail" placeholder="you@example.com" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm">
+                        <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2">Email Address</label>
+                        <input type="email" v-model="profileEmail" class="w-full px-4 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Phone Number</label>
-                        <input type="text" v-model="profilePhone" placeholder="+2348000000000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm">
+                        <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2">Phone Number</label>
+                        <input type="text" v-model="profilePhone" class="w-full px-4 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white transition shadow-sm">
                     </div>
 
-                    <button @click="updateProfile" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm mt-4">Save Preferences</button>
+                    <button @click="updateProfile" :disabled="isSaving" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm mt-6 flex justify-center items-center gap-2">
+                        <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        {{ isSaving ? 'Saving...' : 'Save Preferences' }}
+                    </button>
                 </div>
 
                 <hr class="border-slate-200 dark:border-slate-700 my-8">
 
-                <div class="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/50 rounded-lg">
+                <div class="p-5 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/50 rounded-xl">
                     <h3 class="text-rose-700 dark:text-rose-400 font-display font-bold mb-2">Danger Zone</h3>
-                    <p class="text-xs text-rose-600/80 dark:text-rose-400/80 mb-4 font-medium">Permanently delete your account, vehicles, and documents. This cannot be undone.</p>
-                    <button @click="deleteAccount" class="w-full bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-display font-semibold transition shadow-sm text-sm">Delete Account</button>
+                    <p class="text-xs text-rose-600/80 dark:text-rose-400/80 mb-5 font-medium leading-relaxed">Permanently delete your account, vehicles, and documents. This cannot be undone.</p>
+                    <button @click="deleteAccount" class="w-full bg-rose-600 hover:bg-rose-700 text-white px-4 py-3 rounded-lg font-display font-bold transition shadow-sm text-sm">Delete Account</button>
                 </div>
             </div>
         </div>
 
         <!-- ADD MODALS -->
-        <div v-if="showCarModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700">
+        <div v-if="showCarModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
+                <button @click="showCarModal = false" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 dark:text-white">Add Vehicle</h3>
-                <input v-model="newCar.name" placeholder="Vehicle Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <input v-model="newCar.plate" placeholder="Plate Number" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <select v-model="newCar.driver_id" class="w-full px-4 py-3 mb-6 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition">
-                    <option value="">Unassigned (No Driver)</option>
+                
+                <input v-model="newCar.name" placeholder="Vehicle Name (e.g. Toyota Camry)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input v-model="newCar.plate" placeholder="Plate Number (e.g. KJA-123-XY)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Assign Driver (Optional)</label>
+                <select v-model="newCar.driver_id" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition">
+                    <option value="">Unassigned</option>
                     <option v-for="driver in drivers" :value="driver.id">{{ driver.name }}</option>
                 </select>
-                <button @click="submitCar" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm">Save Vehicle</button>
-                <button @click="showCarModal = false" class="w-full mt-4 text-slate-500 text-sm font-display font-semibold hover:text-slate-700 dark:hover:text-slate-300 transition">Cancel</button>
+                
+                <button @click="submitCar" :disabled="isSaving" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isSaving ? 'Saving...' : 'Save Vehicle' }}
+                </button>
             </div>
         </div>
 
-        <div v-if="showDocModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
-                
-                <div v-if="isUploadingDoc" class="absolute inset-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl">
-                    <div class="w-8 h-8 border-4 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p class="text-slate-900 dark:text-white font-display font-bold">Uploading...</p>
-                </div>
-
+        <div v-if="showDocModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
+                <button @click="showDocModal = false; selectedFile = null" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 dark:text-white">Add Document</h3>
                 
-                <select v-model="newDoc.carId" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition">
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Select Vehicle</label>
+                <select v-model="newDoc.carId" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-accent-500 dark:text-white shadow-sm transition">
                     <option value="" disabled>-- Select Vehicle --</option>
                     <option v-for="car in cars" :value="car.id">{{ car.name }}</option>
                 </select>
                 
-                <input list="addDocTypes" v-model="newDoc.type" placeholder="Document Type (e.g. Insurance)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Document Type</label>
+                <input list="addDocTypes" v-model="newDoc.type" placeholder="e.g. Comprehensive Insurance" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-accent-500 dark:text-white shadow-sm transition" />
                 <datalist id="addDocTypes">
                     <option v-for="t in uniqueDocumentTypes" :key="t" :value="t"></option>
                 </datalist>
                 
-                <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Expiry Date</label>
-                <input type="date" v-model="newDoc.expiry" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Expiry Date</label>
+                <input type="date" v-model="newDoc.expiry" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-accent-500 dark:text-white shadow-sm transition" />
                 
-                <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Image (Optional)</label>
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Image (Optional)</label>
                 <input type="file" @change="handleFileSelect" accept="image/*" class="w-full mb-8 text-sm text-slate-500 dark:text-slate-400" />
                 
-                <button @click="submitDoc" class="w-full bg-accent-600 hover:bg-accent-700 text-white px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm">Save Document</button>
-                <button @click="showDocModal = false; selectedFile = null" class="w-full mt-4 text-slate-500 text-sm font-display font-semibold hover:text-slate-700 dark:hover:text-slate-300 transition">Cancel</button>
+                <button @click="submitDoc" :disabled="isSaving" class="w-full bg-accent-600 hover:bg-accent-700 text-white px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isSaving ? 'Uploading...' : 'Save Document' }}
+                </button>
             </div>
         </div>
 
-        <div v-if="showDriverModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700">
+        <div v-if="showDriverModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
+                <button @click="showDriverModal = false" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 dark:text-white">Add Driver</h3>
-                <input v-model="newDriver.name" placeholder="Full Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <input type="tel" v-model="newDriver.phone" placeholder="Phone Number" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <input type="email" v-model="newDriver.email" placeholder="Email Address (Optional)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
                 
-                <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">License Expiry</label>
-                <input type="date" v-model="newDriver.expiry" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input v-model="newDriver.name" placeholder="Full Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input type="tel" v-model="newDriver.phone" placeholder="Phone (e.g. 0803 123 4567)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input type="email" v-model="newDriver.email" placeholder="Email Address (Optional)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
                 
-                <button @click="submitDriver" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm">Save Driver</button>
-                <button @click="showDriverModal = false" class="w-full mt-4 text-slate-500 text-sm font-display font-semibold hover:text-slate-700 dark:hover:text-slate-300 transition">Cancel</button>
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">License Expiry</label>
+                <input type="date" v-model="newDriver.expiry" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                
+                <button @click="submitDriver" :disabled="isSaving" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isSaving ? 'Saving...' : 'Save Driver' }}
+                </button>
             </div>
         </div>
 
         <!-- EDIT MODALS -->
-        <div v-if="showEditCarModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700">
+        <div v-if="showEditCarModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
+                <button @click="showEditCarModal = false" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 dark:text-white">Edit Vehicle</h3>
-                <input v-model="editCarData.name" placeholder="Vehicle Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <input v-model="editCarData.plate" placeholder="Plate Number" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Assigned Driver</label>
-                <select v-model="editCarData.driver_id" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition">
-                    <option value="">Unassigned (No Driver)</option>
+                
+                <input v-model="editCarData.name" placeholder="Vehicle Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input v-model="editCarData.plate" placeholder="Plate Number" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Assigned Driver</label>
+                <select v-model="editCarData.driver_id" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition">
+                    <option value="">Unassigned</option>
                     <option v-for="driver in drivers" :value="driver.id">{{ driver.name }}</option>
                 </select>
-                <button @click="updateCar" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm">Update Vehicle</button>
-                <button @click="showEditCarModal = false" class="w-full mt-4 text-slate-500 text-sm font-display font-semibold hover:text-slate-700 dark:hover:text-slate-300 transition">Cancel</button>
+                
+                <button @click="updateCar" :disabled="isSaving" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isSaving ? 'Saving...' : 'Update Vehicle' }}
+                </button>
             </div>
         </div>
 
-        <div v-if="showEditDocModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
-                
-                <div v-if="isUploadingDoc" class="absolute inset-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl">
-                    <div class="w-8 h-8 border-4 border-slate-900 dark:border-white border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p class="text-slate-900 dark:text-white font-display font-bold">Updating...</p>
-                </div>
-
+        <div v-if="showEditDocModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
+                <button @click="showEditDocModal = false; selectedFile = null" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 dark:text-white">Edit Document</h3>
                 
-                <input list="editDocTypes" v-model="editDocData.type" placeholder="Document Type" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Document Type</label>
+                <input list="editDocTypes" v-model="editDocData.type" placeholder="Document Type" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-accent-500 dark:text-white shadow-sm transition" />
                 <datalist id="editDocTypes">
                     <option v-for="t in uniqueDocumentTypes" :key="t" :value="t"></option>
                 </datalist>
 
-                <input type="date" v-model="editDocData.expiry" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Expiry Date</label>
+                <input type="date" v-model="editDocData.expiry" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-accent-500 dark:text-white shadow-sm transition" />
                 
-                <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">Replace Image (Optional)</label>
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">Replace Image (Optional)</label>
                 <input type="file" @change="handleFileSelect" accept="image/*" class="w-full mb-8 text-sm text-slate-500 dark:text-slate-400" />
                 
-                <button @click="updateDoc" class="w-full bg-accent-600 hover:bg-accent-700 text-white px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm">Update Document</button>
-                <button @click="showEditDocModal = false; selectedFile = null" class="w-full mt-4 text-slate-500 text-sm font-display font-semibold hover:text-slate-700 dark:hover:text-slate-300 transition">Cancel</button>
+                <button @click="updateDoc" :disabled="isSaving" class="w-full bg-accent-600 hover:bg-accent-700 text-white px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isSaving ? 'Uploading...' : 'Update Document' }}
+                </button>
             </div>
         </div>
 
-        <div v-if="showEditDriverModal" class="fixed inset-0 bg-slate-900/60 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div class="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl max-w-sm w-full border border-slate-200 dark:border-slate-700">
+        <div v-if="showEditDriverModal" class="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-slate-200 dark:border-slate-700 relative">
+                <button @click="showEditDriverModal = false" class="absolute top-5 right-5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition">&times;</button>
                 <h3 class="text-2xl font-display font-bold mb-6 dark:text-white">Edit Driver</h3>
-                <input v-model="editDriverData.name" placeholder="Full Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <input type="tel" v-model="editDriverData.phone" placeholder="Phone Number" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
-                <input type="email" v-model="editDriverData.email" placeholder="Email Address (Optional)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
                 
-                <label class="block text-xs font-display font-semibold text-slate-500 uppercase tracking-widest mb-2">License Expiry</label>
-                <input type="date" v-model="editDriverData.expiry" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input v-model="editDriverData.name" placeholder="Full Name" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input type="tel" v-model="editDriverData.phone" placeholder="Phone Number" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                <input type="email" v-model="editDriverData.email" placeholder="Email Address (Optional)" class="w-full px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
                 
-                <button @click="updateDriver" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3 rounded-lg font-display font-semibold transition shadow-sm">Update Driver</button>
-                <button @click="showEditDriverModal = false" class="w-full mt-4 text-slate-500 text-sm font-display font-semibold hover:text-slate-700 dark:hover:text-slate-300 transition">Cancel</button>
+                <label class="block text-xs font-display font-bold text-slate-500 uppercase tracking-widest mb-2 pl-1">License Expiry</label>
+                <input type="date" v-model="editDriverData.expiry" class="w-full px-4 py-3 mb-8 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white dark:text-white shadow-sm transition" />
+                
+                <button @click="updateDriver" :disabled="isSaving" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-6 py-3.5 rounded-xl font-display font-bold transition shadow-sm flex justify-center items-center gap-2">
+                    <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    {{ isSaving ? 'Saving...' : 'Update Driver' }}
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-       const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';
-
+        const CONTACT_HELP_EMAIL = 'support.otracker@gmail.com';
         const SUPABASE_URL = 'https://qxbwixpeuutmvxngxxos.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_So__v5k60AWVKzg8V_WjLw_EcKyyvxg';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -558,7 +610,17 @@
             setup() {
                 const isLoggedIn = ref(false);
                 const isLoginMode = ref(true);
+                const isInitialLoading = ref(true);
                 const isLoading = ref(false);
+                const isSaving = ref(false); // Global button lock for forms
+                
+                // Toast State
+                const toast = ref({ show: false, message: '', type: 'success' });
+                const showToast = (message, type = 'success') => {
+                    toast.value = { show: true, message, type };
+                    setTimeout(() => toast.value.show = false, 3500);
+                };
+                
                 const authName = ref('');
                 const authPassword = ref('');
                 const authError = ref('');
@@ -599,11 +661,11 @@
                 const editDocData = ref({ id: '', type: '', expiry: '', image_url: '' });
                 const editDriverData = ref({ id: '', name: '', phone: '', email: '', expiry: '' });
                 
-                const isLoadingData = ref(false);
                 const selectedFile = ref(null);
                 const isUploadingDoc = ref(false);
 
                 onMounted(() => {
+                    // Initialize Theme
                     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
                         isDarkMode.value = true;
                         document.documentElement.classList.add('dark');
@@ -612,11 +674,14 @@
                         document.documentElement.classList.remove('dark');
                     }
 
+                    // Check Session
                     const savedSession = localStorage.getItem('otracker_user');
                     if (savedSession) {
                         currentUser.value = JSON.parse(savedSession);
                         isLoggedIn.value = true;
                         fetchFleet();
+                    } else {
+                        isInitialLoading.value = false;
                     }
                 });
 
@@ -631,22 +696,43 @@
                     }
                 };
 
-                const isExpiringSoon = (expiryDateStr) => {
-                    if (!expiryDateStr) return false;
+                // URGENGY ENGINE FOR VISUAL HIERARCHY
+                const getUrgency = (dateStr) => {
+                    if (!dateStr) return { level: 'neutral', text: 'No date', color: 'text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800 border-transparent' };
+                    
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    const expiryDate = new Date(expiryDateStr);
-                    const diffTime = expiryDate - today;
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    return diffDays <= 30;
+                    const exp = new Date(dateStr);
+                    const diff = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+
+                    if (diff < 0) return { level: 'expired', text: `Expired ${Math.abs(diff)}d ago`, color: 'text-rose-700 dark:text-rose-400', bg: 'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800' };
+                    if (diff === 0) return { level: 'danger', text: 'Expires TODAY', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/50' };
+                    if (diff <= 7) return { level: 'danger', text: `${diff} days left`, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/50' };
+                    if (diff <= 30) return { level: 'warning', text: `${diff} days left`, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/50' };
+                    
+                    return { level: 'safe', text: `In ${diff} days`, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/50' };
+                };
+
+                const isExpiringSoon = (dateStr) => {
+                    const status = getUrgency(dateStr).level;
+                    return status === 'danger' || status === 'expired' || status === 'warning';
+                };
+
+                // Formats YYYY-MM-DD to DD/MM/YYYY for UI display
+                const formatDate = (dateStr) => {
+                    if(!dateStr) return '';
+                    const [y, m, d] = dateStr.split('-');
+                    return `${d}/${m}/${y}`;
                 };
 
                 const getDriver = (driverId) => drivers.value.find(d => d.id === driverId);
                 const getCarsByDriver = (driverId) => cars.value.filter(c => c.driver_id === driverId);
 
+                // Pre-populate standard Nigerian documents + any custom ones
+                const standardDocs = ['Vehicle License', 'Roadworthiness', 'Comprehensive Insurance', 'Third-Party Insurance', 'Hackney Permit', 'Proof of Ownership'];
                 const uniqueDocumentTypes = computed(() => {
                     const types = documents.value.map(doc => doc.type);
-                    return [...new Set(types)].filter(Boolean); 
+                    return [...new Set([...standardDocs, ...types])].filter(Boolean); 
                 });
 
                 const filteredCars = computed(() => {
@@ -697,12 +783,13 @@
 
                     if (isLoginMode.value) {
                         const { data, error } = await query.single();
-
                         if (error || !data) {
-                            authError.value = "Invalid credentials. Please try again.";
+                            authError.value = "Incorrect credentials. Please verify your details and try again.";
+                            isLoading.value = false;
                         } else {
                             currentUser.value = data;
                             localStorage.setItem('otracker_user', JSON.stringify(data));
+                            showToast("Welcome back!");
                             isLoggedIn.value = true;
                             fetchFleet();
                         }
@@ -719,14 +806,14 @@
                             .single();
 
                         if (error) {
-                            authError.value = "Registration failed: " + error.message;
+                            authError.value = error.message.includes('duplicate') ? "An account with these details already exists." : "Registration failed. Please try again.";
                         } else { 
-                            authError.value = "Registration successful! You may now log in."; 
+                            authError.value = "Account created successfully! You can now log in."; 
                             isSuccessMsg.value = true;
                             isLoginMode.value = true; 
                         }
+                        isLoading.value = false;
                     }
-                    isLoading.value = false;
                 };
 
                 const logout = () => {
@@ -748,31 +835,30 @@
                 };
 
                 const updateProfile = async () => {
+                    isSaving.value = true;
                     try {
                         const { data, error } = await supabaseClient
                             .from('users')
-                            .update({
-                                name: profileName.value,
-                                email: profileEmail.value,
-                                phone_number: profilePhone.value
-                            })
+                            .update({ name: profileName.value, email: profileEmail.value, phone_number: profilePhone.value })
                             .eq('id', currentUser.value.id)
                             .select()
                             .single();
 
                         if (error) throw error;
 
-                        alert("Profile settings saved successfully!");
+                        showToast("Profile settings saved successfully");
                         currentUser.value = data;
                         localStorage.setItem('otracker_user', JSON.stringify(data));
                         showProfileModal.value = false;
                     } catch (error) {
-                        alert("Error saving profile: " + error.message);
+                        showToast("Failed to save profile", "error");
+                    } finally {
+                        isSaving.value = false;
                     }
                 };
 
                 const deleteAccount = async () => {
-                    if (!confirm("Are you ABSOLUTELY sure? This deletes everything permanently.")) return;
+                    if (!confirm("Are you absolutely sure? This action cannot be undone.")) return;
                     try {
                         if (cars.value.length > 0) {
                             await supabaseClient.from('documents').delete().in('car_id', cars.value.map(c => c.id));
@@ -781,17 +867,17 @@
                         await supabaseClient.from('drivers').delete().eq('owner_id', currentUser.value.id);
                         const { error } = await supabaseClient.from('users').delete().eq('id', currentUser.value.id);
                         if (error) throw error;
-                        alert("Your account and all associated data have been deleted.");
+                        
+                        showToast("Account securely deleted");
                         logout();
                         showProfileModal.value = false;
                     } catch (err) {
-                        alert("Error deleting account: " + err.message);
+                        showToast("Error deleting account", "error");
                     }
                 };
 
                 const fetchFleet = async () => {
                     if (!currentUser.value.id) return;
-                    isLoadingData.value = true;
                     
                     const { data: dr } = await supabaseClient.from('drivers').select('*').eq('owner_id', currentUser.value.id);
                     drivers.value = dr || [];
@@ -805,25 +891,27 @@
                     } else {
                         documents.value = [];
                     }
-                    isLoadingData.value = false;
+                    
+                    isLoading.value = false;
+                    isInitialLoading.value = false; // Hide loading screen
                 };
 
                 const submitCar = async () => {
-                    const payload = { 
-                        owner_id: currentUser.value.id, 
-                        name: newCar.value.name, 
-                        plate_number: newCar.value.plate,
-                        driver_id: newCar.value.driver_id || null
-                    };
+                    if(!newCar.value.name || !newCar.value.plate) {
+                        showToast("Please provide both a name and plate number", "error"); return;
+                    }
+                    isSaving.value = true;
+                    const payload = { owner_id: currentUser.value.id, name: newCar.value.name, plate_number: newCar.value.plate, driver_id: newCar.value.driver_id || null };
                     await supabaseClient.from('cars').insert([payload]);
+                    
                     newCar.value = { name: '', plate: '', driver_id: '' };
                     showCarModal.value = false;
+                    isSaving.value = false;
+                    showToast("Vehicle added to registry");
                     fetchFleet();
                 };
 
-                const handleFileSelect = (event) => {
-                    selectedFile.value = event.target.files[0];
-                };
+                const handleFileSelect = (event) => { selectedFile.value = event.target.files[0]; };
 
                 const openAddDocForCar = (carId) => {
                     newDoc.value = { carId: carId, type: '', expiry: '' };
@@ -832,53 +920,50 @@
                 };
 
                 const submitDoc = async () => {
-                    isUploadingDoc.value = true;
+                    if(!newDoc.value.carId || !newDoc.value.type || !newDoc.value.expiry) {
+                        showToast("Please fill all document details", "error"); return;
+                    }
+                    isSaving.value = true;
                     let finalImageUrl = null;
 
                     if (selectedFile.value) {
                         const fileExt = selectedFile.value.name.split('.').pop();
                         const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-
-                        const { error: uploadError } = await supabaseClient.storage
-                            .from('document_images')
-                            .upload(fileName, selectedFile.value);
+                        const { error: uploadError } = await supabaseClient.storage.from('document_images').upload(fileName, selectedFile.value);
 
                         if (uploadError) {
-                            alert("Failed to upload image: " + uploadError.message);
-                            isUploadingDoc.value = false;
+                            showToast("Image upload failed", "error");
+                            isSaving.value = false;
                             return;
                         }
-
                         const { data: urlData } = supabaseClient.storage.from('document_images').getPublicUrl(fileName);
                         finalImageUrl = urlData.publicUrl;
                     }
 
-                    await supabaseClient.from('documents').insert([{ 
-                        car_id: newDoc.value.carId, 
-                        type: newDoc.value.type, 
-                        expiry_date: newDoc.value.expiry,
-                        image_url: finalImageUrl
-                    }]);
+                    await supabaseClient.from('documents').insert([{ car_id: newDoc.value.carId, type: newDoc.value.type, expiry_date: newDoc.value.expiry, image_url: finalImageUrl }]);
                     
                     newDoc.value = { carId: '', type: '', expiry: '' };
                     selectedFile.value = null;
                     showDocModal.value = false;
-                    isUploadingDoc.value = false;
+                    isSaving.value = false;
+                    showToast("Document saved securely");
                     fetchFleet();
                 };
 
                 const submitDriver = async () => {
-                    const { error } = await supabaseClient.from('drivers').insert([{ 
-                        owner_id: currentUser.value.id, 
-                        name: newDriver.value.name, 
-                        phone: newDriver.value.phone,
-                        email: newDriver.value.email || null,
-                        license_expiry: newDriver.value.expiry
-                    }]);
-                    if (error) { alert("Failed to add driver: " + error.message); return; }
+                    if(!newDriver.value.name || !newDriver.value.expiry) {
+                        showToast("Driver name and license expiry are required", "error"); return;
+                    }
+                    isSaving.value = true;
+                    const { error } = await supabaseClient.from('drivers').insert([{ owner_id: currentUser.value.id, name: newDriver.value.name, phone: newDriver.value.phone, email: newDriver.value.email || null, license_expiry: newDriver.value.expiry }]);
+                    
+                    if (error) { showToast("Failed to add driver", "error"); isSaving.value = false; return; }
+                    
                     newDriver.value = { name: '', phone: '', email: '', expiry: '' };
                     showDriverModal.value = false;
                     activeTab.value = 'drivers';
+                    isSaving.value = false;
+                    showToast("Driver roster updated");
                     fetchFleet();
                 };
 
@@ -899,26 +984,22 @@
                 };
 
                 const updateCar = async () => {
-                    await supabaseClient.from('cars').update({ 
-                        name: editCarData.value.name, 
-                        plate_number: editCarData.value.plate,
-                        driver_id: editCarData.value.driver_id || null
-                    }).eq('id', editCarData.value.id);
+                    isSaving.value = true;
+                    await supabaseClient.from('cars').update({ name: editCarData.value.name, plate_number: editCarData.value.plate, driver_id: editCarData.value.driver_id || null }).eq('id', editCarData.value.id);
                     showEditCarModal.value = false;
+                    isSaving.value = false;
+                    showToast("Vehicle updated");
                     fetchFleet();
                 };
 
                 const updateDoc = async () => {
-                    isUploadingDoc.value = true;
+                    isSaving.value = true;
                     let finalImageUrl = editDocData.value.image_url;
 
                     if (selectedFile.value) {
                         const fileExt = selectedFile.value.name.split('.').pop();
                         const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-
-                        const { error: uploadError } = await supabaseClient.storage
-                            .from('document_images')
-                            .upload(fileName, selectedFile.value);
+                        const { error: uploadError } = await supabaseClient.storage.from('document_images').upload(fileName, selectedFile.value);
 
                         if (!uploadError) {
                             const { data: urlData } = supabaseClient.storage.from('document_images').getPublicUrl(fileName);
@@ -926,65 +1007,67 @@
                         }
                     }
 
-                    await supabaseClient.from('documents').update({ 
-                        type: editDocData.value.type, 
-                        expiry_date: editDocData.value.expiry,
-                        image_url: finalImageUrl
-                    }).eq('id', editDocData.value.id);
+                    await supabaseClient.from('documents').update({ type: editDocData.value.type, expiry_date: editDocData.value.expiry, image_url: finalImageUrl }).eq('id', editDocData.value.id);
                     
                     selectedFile.value = null;
                     showEditDocModal.value = false;
-                    isUploadingDoc.value = false;
+                    isSaving.value = false;
+                    showToast("Document updated");
                     fetchFleet();
                 };
 
                 const updateDriver = async () => {
-                    await supabaseClient.from('drivers').update({ 
-                        name: editDriverData.value.name, 
-                        phone: editDriverData.value.phone,
-                        email: editDriverData.value.email || null,
-                        license_expiry: editDriverData.value.expiry 
-                    }).eq('id', editDriverData.value.id);
+                    isSaving.value = true;
+                    await supabaseClient.from('drivers').update({ name: editDriverData.value.name, phone: editDriverData.value.phone, email: editDriverData.value.email || null, license_expiry: editDriverData.value.expiry }).eq('id', editDriverData.value.id);
                     showEditDriverModal.value = false;
+                    isSaving.value = false;
+                    showToast("Driver details updated");
                     fetchFleet();
                 };
 
                 const deleteCar = async (carId) => {
-                    if (!confirm("Are you sure you want to remove this vehicle? This will delete all its registered documents as well.")) return;
+                    if (!confirm("Remove this vehicle? Associated documents will also be deleted.")) return;
                     await supabaseClient.from('documents').delete().eq('car_id', carId);
                     await supabaseClient.from('cars').delete().eq('id', carId);
+                    showToast("Vehicle removed from registry");
                     fetchFleet();
                 };
 
                 const deleteDoc = async (docId) => {
-                    if (!confirm("Are you sure you want to remove this document?")) return;
+                    if (!confirm("Delete this document?")) return;
                     await supabaseClient.from('documents').delete().eq('id', docId);
+                    showToast("Document deleted");
                     fetchFleet();
                 };
 
                 const deleteDriver = async (driverId) => {
-                    if (!confirm("Are you sure you want to remove this driver? Vehicles assigned to them will be unassigned.")) return;
+                    if (!confirm("Remove this driver? Their assigned vehicles will become unassigned.")) return;
                     await supabaseClient.from('cars').update({ driver_id: null }).eq('driver_id', driverId);
                     await supabaseClient.from('drivers').delete().eq('id', driverId);
+                    showToast("Driver removed from roster");
                     fetchFleet();
                 };
 
-                const getCarDocuments = (id) => documents.value.filter(d => d.car_id === id);
+                // Returns documents sorted with the most urgent ones at the top
+                const getCarDocuments = (id) => {
+                    let docs = documents.value.filter(d => d.car_id === id);
+                    return docs.sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+                };
 
                 return { 
-                    isLoggedIn, isLoginMode, isLoading, handleAuth, logout, 
+                    isLoggedIn, isLoginMode, isLoading, isInitialLoading, isSaving, toast, handleAuth, logout, 
                     activeTab, cars, filteredCars, searchQuery, documents, uniqueDocumentTypes, drivers, getCarDocuments, getDriver, getCarsByDriver,
                     showProfileModal, showCarModal, showDocModal, showDriverModal, 
                     showEditCarModal, showEditDocModal, showEditDriverModal,
                     submitCar, submitDoc, submitDriver, openAddDocForCar, handleFileSelect, isUploadingDoc,
-                    updateCar, updateDoc, updateDriver, 
-                    deleteCar, deleteDoc, deleteDriver, 
-                    openEditCar, openEditDoc, openEditDriver, openProfileModal,
-                    updateProfile, deleteAccount, toggleTheme, isDarkMode, contactHelpEmail,
+                    updateCar, updateDoc, updateDriver, deleteCar, deleteDoc, deleteDriver, 
+                    openEditCar, openEditDoc, openEditDriver, openProfileModal, updateProfile, deleteAccount, 
+                    toggleTheme, isDarkMode, contactHelpEmail,
                     newCar, newDoc, newDriver, editCarData, editDocData, editDriverData,
                     usePhoneAuth, authEmail, selectedCountryCode, localPhoneNumber,
-                    authName, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, currentUser, toggleAuthMode, isLoadingData,
-                    totalVehicles, activeCredentials, actionNeeded, isExpiringSoon, showPassword
+                    authName, authPassword, authError, isSuccessMsg, profileName, profileEmail, profilePhone, 
+                    currentUser, toggleAuthMode, totalVehicles, activeCredentials, actionNeeded, 
+                    isExpiringSoon, getUrgency, formatDate, showPassword
                 };
             }
         }).mount('#app');
