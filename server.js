@@ -33,21 +33,29 @@ app.get('/api/run-reminders', async (req, res) => {
         };
 
         const todayStr = addDays(0);
+        const maxDateStr = addDays(30);
 
-        // 1. Generate target dates for 30, 25, 20, 15, 10, 5, and 0 days out
-        const intervalDays = [0, 5, 10, 15, 20, 25, 30];
-        const targetDates = intervalDays.map((days) => addDays(days));
-
-        // 2. Query documents matching any of these exact 5-day interval dates
+        // 1. Fetch ALL documents expiring in 30 days OR LESS (this includes all past expired documents)
         const { data: documents, error } = await supabase
             .from('documents')
             .select('*')
-            .in('expiry_date', targetDates);
+            .lte('expiry_date', maxDateStr);
 
         if (error) throw error;
 
         if (documents && documents.length > 0) {
             for (const doc of documents) {
+                
+                const expiryObj = new Date(doc.expiry_date);
+                const todayObj = new Date(todayStr);
+                
+                // Calculates exact days remaining (Negative numbers = days already expired)
+                const diffDays = Math.round((expiryObj - todayObj) / (1000 * 60 * 60 * 24));
+
+                // 2. THE MAGIC FILTER: Only alert if it is exactly a multiple of 5 days
+                // This cleanly catches 30, 25, 20... 0... -5, -10, -15... forever!
+                if (diffDays % 5 !== 0) continue;
+
                 // Get Car details
                 const { data: car } = await supabase
                     .from('cars')
@@ -65,30 +73,30 @@ app.get('/api/run-reminders', async (req, res) => {
                 if (!owner) continue;
 
                 const userEmail = owner.email;
-                
-                // ADDED THIS: Dynamically grabs the name based on your database column
                 const userName = owner.username || owner.name || owner.first_name || 'Valued User';
-                
                 const vehicleName = `${car.name} (${car.plate_number})`;
 
-                // Calculate exact days remaining for the email template
-                const expiryObj = new Date(doc.expiry_date);
-                const todayObj = new Date(todayStr);
-                const daysRemaining = Math.round((expiryObj - todayObj) / (1000 * 60 * 60 * 24));
+                // 3. Dynamic formatting for past vs future alerts
+                let statusText = "";
+                if (diffDays > 0) {
+                    statusText = `Expires in ${diffDays} days`;
+                } else if (diffDays === 0) {
+                    statusText = "EXPIRES TODAY";
+                } else {
+                    statusText = `EXPIRED ${Math.abs(diffDays)} days ago!`;
+                }
 
                 if (userEmail && userEmail.trim() !== '') {
                     
-                    // Parameters matching your EmailJS template
                     const templateParams = {
-                        user_name: userName, // <-- ADDED THIS!
+                        user_name: userName,
                         user_email: userEmail,
                         vehicle_name: vehicleName,
                         doc_type: doc.type,
                         expiry_date: doc.expiry_date,
-                        days_remaining: daysRemaining === 0 ? "TODAY" : `${daysRemaining} days`
+                        days_remaining: statusText 
                     };
 
-                    // Send email via EmailJS
                     await emailjs.send(
                         process.env.EMAILJS_SERVICE_ID,
                         process.env.EMAILJS_TEMPLATE_ID,
