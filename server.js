@@ -65,6 +65,10 @@ app.get('/api/run-reminders', async (req, res) => {
                 if (!owner) continue;
 
                 const userEmail = owner.email;
+                
+                // ADDED THIS: Dynamically grabs the name based on your database column
+                const userName = owner.username || owner.name || owner.first_name || 'Valued User';
+                
                 const vehicleName = `${car.name} (${car.plate_number})`;
 
                 // Calculate exact days remaining for the email template
@@ -76,6 +80,7 @@ app.get('/api/run-reminders', async (req, res) => {
                     
                     // Parameters matching your EmailJS template
                     const templateParams = {
+                        user_name: userName, // <-- ADDED THIS!
                         user_email: userEmail,
                         vehicle_name: vehicleName,
                         doc_type: doc.type,
@@ -101,8 +106,10 @@ app.get('/api/run-reminders', async (req, res) => {
         console.log(`Job complete. Sent ${emailsSent} email alerts.`);
         res.status(200).send(`OK. ${emailsSent} email alerts sent.`);
     } catch (err) {
-        console.error("Error during reminder execution:", err.message);
-        res.status(500).send("Server Error.");
+        // EXPOSING THE HIDDEN EMAILJS ERROR
+        const errorDetails = err.text || err.message || JSON.stringify(err);
+        console.error("Error during reminder execution:", errorDetails);
+        res.status(500).send(`Server Error: ${errorDetails}`);
     }
 });
 
